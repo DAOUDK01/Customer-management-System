@@ -1,0 +1,306 @@
+:root {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: #111827;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+table {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 0.85rem;
+  padding: 0.9rem 1.1rem;
+  background: #111827;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+input {
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: white;
+}
+
+select {
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: white;
+}
+
+.auth-shell,
+.dashboard-shell {
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.auth-shell {
+  display: grid;
+  place-items: center;
+}
+
+.auth-card,
+.content-card,
+.stat-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.auth-card {
+  width: min(100%, 440px);
+  padding: 1.5rem;
+  border-radius: 1.25rem;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+.muted {
+  color: #64748b;
+}
+
+.form-stack {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.error-text {
+  margin: 0;
+  color: #b91c1c;
+}
+
+.secondary-button {
+  background: white;
+  color: #111827;
+  border: 1px solid #cbd5e1;
+}
+
+.card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.stat-card,
+.content-card {
+  border-radius: 1rem;
+  padding: 1.25rem;
+}
+
+.stat-card {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.stat-card span {
+  color: #64748b;
+}
+
+.stat-card strong {
+  font-size: 1.75rem;
+}
+
+.content-card {
+  margin-top: 1rem;
+}
+
+.inline-controls {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.manager-nav {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.manager-nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.7rem;
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #334155;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.manager-nav-link.active {
+  background: #111827;
+  border-color: #111827;
+  color: white;
+}
+
+.table-wrap {
+  margin-top: 1rem;
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 620px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.7rem;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+th {
+  color: #475569;
+  font-weight: 700;
+}
+
+.receipt-card {
+  margin-top: 1.25rem;
+  border: 1px dashed #94a3b8;
+  border-radius: 0.9rem;
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.receipt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.receipt-header h3 {
+  margin: 0;
+}
+
+.receipt-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.85rem;
+}
+
+.quick-item-btn {
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+  background: #fff;
+  color: #111827;
+  border: 1px solid #cbd5e1;
+}
+
+.quick-item-btn strong {
+  font-size: 1rem;
+}
+
+.quick-item-btn span {
+  color: #111827;
+  font-weight: 700;
+}
+
+.quick-item-btn small {
+  color: #64748b;
+}
+
+.qty-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.stock-input {
+  width: 88px;
+  margin-top: 0;
+  padding: 0.55rem 0.6rem;
+}
+
+.receipt-total {
+  margin-top: 0.85rem;
+  font-weight: 700;
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+@media (min-width: 900px) {
+  .dashboard-shell {
+    padding: 2rem 2.5rem;
+  }
+
+  .auth-card {
+    padding: 2rem;
+  }
+}

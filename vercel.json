@@ -1,6 +1,6 @@
 {
   "installCommand": "npm install",
-  "buildCommand": "npm run build && node -e \"const fs=require('fs');if(fs.existsSync('client/dist')){fs.rmSync('dist',{recursive:true,force:true});fs.cpSync('client/dist','dist',{recursive:true});}else if(!fs.existsSync('dist')){throw new Error('Build output not found. Expected client/dist or dist');}\"",
+  "buildCommand": "node vercel-build.cjs",
   "outputDirectory": "dist",
   "rewrites": [
     {

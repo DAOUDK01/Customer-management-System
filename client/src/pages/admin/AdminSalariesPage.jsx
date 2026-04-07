@@ -157,13 +157,16 @@ export default function AdminSalariesPage() {
     <section className="content-card">
       <h2>Salaries</h2>
       <p className="muted">
-        Select an employee box to view salary details, then add a new salary entry.
+        Select an employee box to view salary details, then add a new salary
+        entry.
       </p>
 
       <section className="salary-create-bar">
         <div>
           <h3>Add New Employee</h3>
-          <p className="muted">Create once, then click the employee box to manage salaries.</p>
+          <p className="muted">
+            Create once, then click the employee box to manage salaries.
+          </p>
         </div>
         <form className="salary-create-form" onSubmit={handleCreateEmployee}>
           <label>
@@ -203,7 +206,8 @@ export default function AdminSalariesPage() {
 
       <div className="employee-grid">
         {employees.map((employee) => {
-          const isSelected = String(employee._id) === String(selectedEmployeeId);
+          const isSelected =
+            String(employee._id) === String(selectedEmployeeId);
 
           return (
             <button
@@ -248,7 +252,10 @@ export default function AdminSalariesPage() {
           </div>
 
           {selectedEmployee ? (
-            <form className="form-stack salary-inline-form" onSubmit={handleCreateSalary}>
+            <form
+              className="form-stack salary-inline-form"
+              onSubmit={handleCreateSalary}
+            >
               <input type="hidden" value={salaryForm.employeeId} readOnly />
               <label>
                 Month
@@ -330,7 +337,9 @@ export default function AdminSalariesPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6">No salary records for this employee yet.</td>
+                    <td colSpan="6">
+                      No salary records for this employee yet.
+                    </td>
                   </tr>
                 )}
               </tbody>

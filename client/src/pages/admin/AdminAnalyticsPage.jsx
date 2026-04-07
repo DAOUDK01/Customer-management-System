@@ -43,7 +43,9 @@ function downloadWorkbook(filename, sheetName, rows) {
 }
 
 function buildAnalytics(orders) {
-  const completedOrders = orders.filter((order) => order.status === "completed");
+  const completedOrders = orders.filter(
+    (order) => order.status === "completed",
+  );
   const totalRevenue = completedOrders.reduce(
     (sum, order) => sum + Number(order.totalAmount || 0),
     0,
@@ -69,8 +71,8 @@ function buildAnalytics(orders) {
     return accumulator;
   }, {});
 
-  const last7 = getLastNDays(7).map((day) =>
-    dailyMap[day] || { day, orders: 0, revenue: 0 },
+  const last7 = getLastNDays(7).map(
+    (day) => dailyMap[day] || { day, orders: 0, revenue: 0 },
   );
 
   return {

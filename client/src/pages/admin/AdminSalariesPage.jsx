@@ -107,6 +107,29 @@ export default function AdminSalariesPage() {
     }
   }
 
+  async function handleDeleteEmployee(employeeId) {
+    if (!window.confirm("Are you sure you want to delete this employee and all their salary records?")) {
+      return;
+    }
+
+    setMessage("");
+    setLoading(true);
+
+    try {
+      await apiRequest(`/salaries/${employeeId}`, {
+        method: "DELETE",
+      });
+
+      setMessage("Employee deleted");
+      setSelectedEmployeeId("");
+      await loadSalaries();
+    } catch (requestError) {
+      setMessage(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleEmployeeSelect(employeeId) {
     const employee = employees.find((entry) => entry._id === employeeId);
     setSelectedEmployeeId(employeeId);
@@ -210,18 +233,28 @@ export default function AdminSalariesPage() {
             String(employee._id) === String(selectedEmployeeId);
 
           return (
-            <button
-              key={employee._id}
-              type="button"
-              className={isSelected ? "employee-card active" : "employee-card"}
-              onClick={() => handleEmployeeSelect(employee._id)}
-            >
-              <strong>{employee.name}</strong>
-              <span>{formatINR(employee.monthlySalary)}</span>
-              <small>
-                Outstanding advance: {formatINR(employee.outstandingAdvance)}
-              </small>
-            </button>
+            <div key={employee._id} className="employee-card-wrapper">
+              <button
+                type="button"
+                className={isSelected ? "employee-card active" : "employee-card"}
+                onClick={() => handleEmployeeSelect(employee._id)}
+              >
+                <strong>{employee.name}</strong>
+                <span>{formatINR(employee.monthlySalary)}</span>
+                <small>
+                  Outstanding advance: {formatINR(employee.outstandingAdvance)}
+                </small>
+              </button>
+              <button
+                type="button"
+                className="delete-btn-small"
+                onClick={() => handleDeleteEmployee(employee._id)}
+                title="Delete employee"
+                disabled={loading}
+              >
+                ✕
+              </button>
+            </div>
           );
         })}
       </div>

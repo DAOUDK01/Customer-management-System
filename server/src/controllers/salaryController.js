@@ -119,6 +119,7 @@ async function createSalary(req, res, next) {
       defaultMonthlySalary,
     } = req.body;
 
+    // Handle employee creation
     if (!employeeId && name && defaultMonthlySalary !== undefined) {
       if (Number.isNaN(Number(defaultMonthlySalary))) {
         return res
@@ -135,6 +136,7 @@ async function createSalary(req, res, next) {
       return res.status(201).json({ employee });
     }
 
+    // Handle salary record creation
     if (!employeeId || Number.isNaN(Number(monthlySalary))) {
       return res
         .status(400)
@@ -206,9 +208,31 @@ async function createSalary(req, res, next) {
   }
 }
 
+async function deleteEmployee(req, res, next) {
+  try {
+    const { employeeId } = req.params;
+
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    // Delete all salary records associated with this employee
+    await Salary.deleteMany({ employeeId });
+
+    // Delete the employee
+    await Employee.findByIdAndDelete(employeeId);
+
+    return res.json({ message: "Employee and their salary records deleted" });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   listSalaries,
   listEmployees,
   createEmployee,
   createSalary,
+  deleteEmployee,
 };

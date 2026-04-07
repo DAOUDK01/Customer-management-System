@@ -11,16 +11,10 @@ export default function AdminDashboard() {
     yearlyRevenue: 0,
   });
   const [archiveBefore, setArchiveBefore] = useState("");
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [orders, setOrders] = useState([]);
   const [items, setItems] = useState([]);
-  const [salaries, setSalaries] = useState([]);
-  const [salaryForm, setSalaryForm] = useState({
-    employeeName: "",
-    amount: "",
-    date: "",
-  });
+  const [message, setMessage] = useState("");
 
   async function loadSummary() {
     const result = await apiRequest("/orders/revenue/summary");
@@ -81,31 +75,6 @@ export default function AdminDashboard() {
       await Promise.all([loadSummary(), loadOrders()]);
     } catch (requestError) {
       setMessage(requestError.message);
-    }
-  }
-
-  async function handleCreateSalary(event) {
-    event.preventDefault();
-    setMessage("");
-    setLoading(true);
-
-    try {
-      await apiRequest("/salaries", {
-        method: "POST",
-        body: JSON.stringify({
-          employeeName: salaryForm.employeeName,
-          amount: Number(salaryForm.amount),
-          date: salaryForm.date,
-        }),
-      });
-
-      setMessage("Salary record added");
-      setSalaryForm({ employeeName: "", amount: "", date: "" });
-      await loadSalaries();
-    } catch (requestError) {
-      setMessage(requestError.message);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -226,71 +195,11 @@ export default function AdminDashboard() {
 
       <section className="content-card">
         <h2>Staff salary management</h2>
-        <form className="form-stack" onSubmit={handleCreateSalary}>
-          <label>
-            Employee name
-            <input
-              type="text"
-              value={salaryForm.employeeName}
-              onChange={(event) =>
-                setSalaryForm({
-                  ...salaryForm,
-                  employeeName: event.target.value,
-                })
-              }
-              placeholder="John Doe"
-              required
-            />
-          </label>
-          <label>
-            Salary amount
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={salaryForm.amount}
-              onChange={(event) =>
-                setSalaryForm({ ...salaryForm, amount: event.target.value })
-              }
-              placeholder="450"
-              required
-            />
-          </label>
-          <label>
-            Salary date
-            <input
-              type="date"
-              value={salaryForm.date}
-              onChange={(event) =>
-                setSalaryForm({ ...salaryForm, date: event.target.value })
-              }
-              required
-            />
-          </label>
-          <button type="submit" disabled={loading}>
-            {loading ? "Saving..." : "Add salary record"}
-          </button>
-        </form>
-
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Employee</th>
-                <th>Amount</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {salaries.map((salary) => (
-                <tr key={salary._id}>
-                  <td>{salary.employeeName}</td>
-                  <td>{formatINR(salary.amount)}</td>
-                  <td>{new Date(salary.date).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{ padding: "1rem", backgroundColor: "#f5f5f5", borderRadius: "4px", marginBottom: "1rem" }}>
+          <p style={{ margin: "0", fontSize: "0.95rem", color: "#666" }}>
+            📍 Salary management has been moved to the <strong>Salaries</strong> tab for better organization. 
+            Use the Salaries page to add employees and manage their salary records.
+          </p>
         </div>
       </section>
     </main>

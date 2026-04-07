@@ -411,6 +411,42 @@ th {
   opacity: 0.8;
 }
 
+.employee-card-wrapper {
+  position: relative;
+}
+
+.delete-btn-small {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  margin: 0;
+  background: #dc2626;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.employee-card-wrapper:hover .delete-btn-small {
+  opacity: 1;
+}
+
+.delete-btn-small:hover {
+  background: #b91c1c !important;
+}
+
+.delete-btn-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .salary-detail-layout {
   display: grid;
   gap: 1rem;

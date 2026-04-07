@@ -119,34 +119,50 @@ async function createSalary(req, res, next) {
       defaultMonthlySalary,
     } = req.body;
 
+    console.log("createSalary received:", {
+      employeeId,
+      month,
+      monthlySalary,
+      name,
+      defaultMonthlySalary,
+    });
+
     // Handle employee creation
-    if (
-      !employeeId &&
-      name &&
-      defaultMonthlySalary !== undefined &&
-      defaultMonthlySalary !== ""
-    ) {
-      const salary = Number(defaultMonthlySalary);
-      if (Number.isNaN(salary)) {
-        return res
-          .status(400)
-          .json({ message: "defaultMonthlySalary must be a valid number" });
+    // Employee creation: if name and defaultMonthlySalary are provided, no employeeId
+    if (name && defaultMonthlySalary !== undefined && defaultMonthlySalary !== "") {
+      if (!employeeId) {
+        // This is employee creation mode
+        const salary = Number(defaultMonthlySalary);
+        console.log("Creating employee with:", { name, salary });
+
+        if (Number.isNaN(salary) || salary <= 0) {
+          return res
+            .status(400)
+            .json({ message: "defaultMonthlySalary must be a valid positive number" });
+        }
+
+        const employee = await Employee.create({
+          name: String(name).trim(),
+          defaultMonthlySalary: salary,
+          createdBy: req.user.id,
+        });
+
+        console.log("Employee created:", employee._id);
+        return res.status(201).json({ employee });
       }
-
-      const employee = await Employee.create({
-        name: String(name).trim(),
-        defaultMonthlySalary: salary,
-        createdBy: req.user.id,
-      });
-
-      return res.status(201).json({ employee });
     }
 
     // Handle salary record creation
-    if (!employeeId || Number.isNaN(Number(monthlySalary))) {
+    if (!employeeId || !month || monthlySalary === undefined) {
       return res
         .status(400)
-        .json({ message: "employeeId and monthlySalary are required" });
+        .json({ message: "employeeId, month, and monthlySalary are required" });
+    }
+
+    if (Number.isNaN(Number(monthlySalary)) || Number(monthlySalary) < 0) {
+      return res
+        .status(400)
+        .json({ message: "monthlySalary must be a valid positive number" });
     }
 
     const monthKey = getMonthKey(month);
@@ -205,10 +221,17 @@ async function createSalary(req, res, next) {
 
     return res.status(201).json({ salary });
   } catch (error) {
+    console.error("createSalary error:", error.message);
     if (error.code === 11000) {
       return res
         .status(409)
         .json({ message: "Salary already added for this employee and month" });
+    }
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors)
+        .map((err) => err.message)
+        .join(", ");
+      return res.status(400).json({ message: messages });
     }
     return next(error);
   }

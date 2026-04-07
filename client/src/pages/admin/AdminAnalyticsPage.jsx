@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { apiDownload, apiRequest } from "../../api";
 import { formatINR } from "../../utils/currency";
@@ -66,10 +65,10 @@ export default function AdminAnalyticsPage() {
     }
   }
 
-  const monthLabel = useMemo(() => selectedMonth || analytics.currentMonth, [
-    selectedMonth,
-    analytics.currentMonth,
-  ]);
+  const monthLabel = useMemo(
+    () => selectedMonth || analytics.currentMonth,
+    [selectedMonth, analytics.currentMonth],
+  );
 
   return (
     <>

@@ -52,7 +52,9 @@ export default function ManagerDashboard() {
 
       <section className="content-card">
         <h2>Completed Orders History</h2>
-        <p className="muted">This view shows every completed order, not only today.</p>
+        <p className="muted">
+          This view shows every completed order, not only today.
+        </p>
         {message ? <p className="muted">{message}</p> : null}
 
         <div className="table-wrap">

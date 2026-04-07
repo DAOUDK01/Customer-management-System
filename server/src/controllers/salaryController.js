@@ -15,10 +15,15 @@ function getMonthKey(value) {
 }
 
 async function getOutstandingAdvanceBefore(employeeId, month) {
-  const records = await Salary.find({ employeeId, month: { $lt: month } }).sort({ month: 1, createdAt: 1 });
+  const records = await Salary.find({ employeeId, month: { $lt: month } }).sort(
+    { month: 1, createdAt: 1 },
+  );
 
   return records.reduce(
-    (sum, entry) => sum + Number(entry.extraReceived || 0) - Number(entry.deductionApplied || 0),
+    (sum, entry) =>
+      sum +
+      Number(entry.extraReceived || 0) -
+      Number(entry.deductionApplied || 0),
     0,
   );
 }
@@ -43,7 +48,9 @@ async function listSalaries(req, res, next) {
 
     const employeeSummaries = employees.map((employee) => {
       const records = salariesByEmployee[String(employee._id)] || [];
-      const currentMonthRecord = records.find((record) => record.month === currentMonth);
+      const currentMonthRecord = records.find(
+        (record) => record.month === currentMonth,
+      );
       const latestRecord = records[0];
 
       return {
@@ -51,7 +58,10 @@ async function listSalaries(req, res, next) {
         name: employee.name,
         defaultMonthlySalary: employee.defaultMonthlySalary,
         currentMonth,
-        monthlySalary: currentMonthRecord?.monthlySalary ?? latestRecord?.monthlySalary ?? employee.defaultMonthlySalary,
+        monthlySalary:
+          currentMonthRecord?.monthlySalary ??
+          latestRecord?.monthlySalary ??
+          employee.defaultMonthlySalary,
         monthlyReceiving: currentMonthRecord?.monthlyReceiving ?? 0,
         extraReceived: currentMonthRecord?.extraReceived ?? 0,
         outstandingAdvance: latestRecord?.outstandingAdvanceAfter ?? 0,
@@ -78,7 +88,9 @@ async function createEmployee(req, res, next) {
     const { name, defaultMonthlySalary } = req.body;
 
     if (!name || Number.isNaN(Number(defaultMonthlySalary))) {
-      return res.status(400).json({ message: "name and defaultMonthlySalary are required" });
+      return res
+        .status(400)
+        .json({ message: "name and defaultMonthlySalary are required" });
     }
 
     const employee = await Employee.create({
@@ -101,12 +113,16 @@ async function createSalary(req, res, next) {
     const { employeeId, month, monthlySalary, extraReceived = 0 } = req.body;
 
     if (!employeeId || Number.isNaN(Number(monthlySalary))) {
-      return res.status(400).json({ message: "employeeId and monthlySalary are required" });
+      return res
+        .status(400)
+        .json({ message: "employeeId and monthlySalary are required" });
     }
 
     const monthKey = getMonthKey(month);
     if (!monthKey) {
-      return res.status(400).json({ message: "month must be in YYYY-MM format" });
+      return res
+        .status(400)
+        .json({ message: "month must be in YYYY-MM format" });
     }
 
     const employee = await Employee.findById(employeeId);
@@ -123,12 +139,24 @@ async function createSalary(req, res, next) {
       Number.isNaN(parsedExtraReceived) ||
       parsedExtraReceived < 0
     ) {
-      return res.status(400).json({ message: "monthlySalary and extraReceived must be valid positive numbers" });
+      return res
+        .status(400)
+        .json({
+          message:
+            "monthlySalary and extraReceived must be valid positive numbers",
+        });
     }
 
-    const outstandingBefore = await getOutstandingAdvanceBefore(employee._id, monthKey);
-    const deductionApplied = Math.min(Math.max(outstandingBefore, 0), parsedMonthlySalary);
-    const monthlyReceiving = parsedMonthlySalary - deductionApplied + parsedExtraReceived;
+    const outstandingBefore = await getOutstandingAdvanceBefore(
+      employee._id,
+      monthKey,
+    );
+    const deductionApplied = Math.min(
+      Math.max(outstandingBefore, 0),
+      parsedMonthlySalary,
+    );
+    const monthlyReceiving =
+      parsedMonthlySalary - deductionApplied + parsedExtraReceived;
     const outstandingAdvanceAfter = Math.max(
       0,
       outstandingBefore - deductionApplied + parsedExtraReceived,
@@ -149,7 +177,9 @@ async function createSalary(req, res, next) {
     return res.status(201).json({ salary });
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(409).json({ message: "Salary already added for this employee and month" });
+      return res
+        .status(409)
+        .json({ message: "Salary already added for this employee and month" });
     }
     return next(error);
   }

@@ -47,8 +47,7 @@ async function createOrder(req, res, next) {
     const order = await Order.create({
       items: normalizedItems,
       totalAmount,
-      status:
-        status && ORDER_STATUSES.includes(status) ? status : "processing",
+      status: status && ORDER_STATUSES.includes(status) ? status : "processing",
       createdBy: req.user.id,
     });
 
@@ -82,7 +81,9 @@ async function listOrders(req, res, next) {
 
 async function listCompletedOrders(req, res, next) {
   try {
-    const orders = await Order.find({ status: "completed" }).sort({ createdAt: -1 });
+    const orders = await Order.find({ status: "completed" }).sort({
+      createdAt: -1,
+    });
     return res.json({ orders });
   } catch (error) {
     return next(error);
@@ -307,7 +308,9 @@ async function getAdminAnalytics(req, res, next) {
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
     const allOrders = await Order.find().sort({ createdAt: -1 }).lean();
-    const completedOrders = allOrders.filter((order) => order.status === "completed");
+    const completedOrders = allOrders.filter(
+      (order) => order.status === "completed",
+    );
 
     const byStatus = {
       processing: 0,
@@ -431,13 +434,19 @@ async function downloadRevenueExcel(req, res, next) {
     const sheet = XLSX.utils.json_to_sheet(rows);
     XLSX.utils.book_append_sheet(workbook, sheet, "Revenue");
 
-    const fileBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+    const fileBuffer = XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx",
+    });
 
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
-    res.setHeader("Content-Disposition", "attachment; filename=revenue-details.xlsx");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=revenue-details.xlsx",
+    );
 
     return res.send(fileBuffer);
   } catch (error) {
@@ -472,7 +481,8 @@ async function getTopItemsByMonth(req, res, next) {
           };
         }
         itemMap[item.name].quantity += Number(item.quantity || 0);
-        itemMap[item.name].revenue += Number(item.quantity || 0) * Number(item.price || 0);
+        itemMap[item.name].revenue +=
+          Number(item.quantity || 0) * Number(item.price || 0);
       });
     });
 
@@ -514,7 +524,8 @@ async function downloadTopItemsExcel(req, res, next) {
           };
         }
         itemMap[item.name].QuantitySold += Number(item.quantity || 0);
-        itemMap[item.name].Revenue += Number(item.quantity || 0) * Number(item.price || 0);
+        itemMap[item.name].Revenue +=
+          Number(item.quantity || 0) * Number(item.price || 0);
       });
     });
 
@@ -525,13 +536,19 @@ async function downloadTopItemsExcel(req, res, next) {
     const workbook = XLSX.utils.book_new();
     const sheet = XLSX.utils.json_to_sheet(rows);
     XLSX.utils.book_append_sheet(workbook, sheet, "TopItems");
-    const fileBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+    const fileBuffer = XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx",
+    });
 
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
-    res.setHeader("Content-Disposition", `attachment; filename=top-items-${month}.xlsx`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=top-items-${month}.xlsx`,
+    );
 
     return res.send(fileBuffer);
   } catch (error) {

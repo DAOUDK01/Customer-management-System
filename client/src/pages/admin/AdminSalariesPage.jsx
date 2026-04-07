@@ -93,7 +93,8 @@ export default function AdminSalariesPage() {
           ? String(employee.monthlySalary)
           : current.monthlySalary,
       month:
-        current.month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`,
+        current.month ||
+        `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`,
     }));
   }
 

@@ -129,7 +129,11 @@ async function createSalary(req, res, next) {
 
     // Handle employee creation
     // Employee creation: if name and defaultMonthlySalary are provided, no employeeId
-    if (name && defaultMonthlySalary !== undefined && defaultMonthlySalary !== "") {
+    if (
+      name &&
+      defaultMonthlySalary !== undefined &&
+      defaultMonthlySalary !== ""
+    ) {
       if (!employeeId) {
         // This is employee creation mode
         const salary = Number(defaultMonthlySalary);
@@ -138,7 +142,9 @@ async function createSalary(req, res, next) {
         if (Number.isNaN(salary) || salary <= 0) {
           return res
             .status(400)
-            .json({ message: "defaultMonthlySalary must be a valid positive number" });
+            .json({
+              message: "defaultMonthlySalary must be a valid positive number",
+            });
         }
 
         const employee = await Employee.create({

@@ -120,8 +120,9 @@ async function createSalary(req, res, next) {
     } = req.body;
 
     // Handle employee creation
-    if (!employeeId && name && defaultMonthlySalary !== undefined) {
-      if (Number.isNaN(Number(defaultMonthlySalary))) {
+    if (!employeeId && name && (defaultMonthlySalary !== undefined && defaultMonthlySalary !== "")) {
+      const salary = Number(defaultMonthlySalary);
+      if (Number.isNaN(salary)) {
         return res
           .status(400)
           .json({ message: "defaultMonthlySalary must be a valid number" });
@@ -129,7 +130,7 @@ async function createSalary(req, res, next) {
 
       const employee = await Employee.create({
         name: String(name).trim(),
-        defaultMonthlySalary: Number(defaultMonthlySalary),
+        defaultMonthlySalary: salary,
         createdBy: req.user.id,
       });
 

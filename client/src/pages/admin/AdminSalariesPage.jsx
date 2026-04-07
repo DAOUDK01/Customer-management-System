@@ -89,15 +89,30 @@ export default function AdminSalariesPage() {
     setLoading(true);
 
     try {
+      const trimmedName = employeeForm.name.trim();
+      const salary = Number(employeeForm.defaultMonthlySalary);
+
+      if (!trimmedName) {
+        setMessage("Employee name is required");
+        setLoading(false);
+        return;
+      }
+
+      if (Number.isNaN(salary) || salary <= 0) {
+        setMessage("Default salary must be a positive number");
+        setLoading(false);
+        return;
+      }
+
       await apiRequest("/salaries", {
         method: "POST",
         body: JSON.stringify({
-          name: employeeForm.name,
-          defaultMonthlySalary: Number(employeeForm.defaultMonthlySalary),
+          name: trimmedName,
+          defaultMonthlySalary: salary,
         }),
       });
 
-      setMessage("Employee added");
+      setMessage("Employee added successfully!");
       setEmployeeForm({ name: "", defaultMonthlySalary: "" });
       await loadSalaries();
     } catch (requestError) {

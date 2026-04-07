@@ -108,7 +108,11 @@ export default function AdminSalariesPage() {
   }
 
   async function handleDeleteEmployee(employeeId) {
-    if (!window.confirm("Are you sure you want to delete this employee and all their salary records?")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this employee and all their salary records?",
+      )
+    ) {
       return;
     }
 
@@ -236,7 +240,9 @@ export default function AdminSalariesPage() {
             <div key={employee._id} className="employee-card-wrapper">
               <button
                 type="button"
-                className={isSelected ? "employee-card active" : "employee-card"}
+                className={
+                  isSelected ? "employee-card active" : "employee-card"
+                }
                 onClick={() => handleEmployeeSelect(employee._id)}
               >
                 <strong>{employee.name}</strong>

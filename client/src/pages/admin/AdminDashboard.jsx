@@ -195,10 +195,18 @@ export default function AdminDashboard() {
 
       <section className="content-card">
         <h2>Staff salary management</h2>
-        <div style={{ padding: "1rem", backgroundColor: "#f5f5f5", borderRadius: "4px", marginBottom: "1rem" }}>
+        <div
+          style={{
+            padding: "1rem",
+            backgroundColor: "#f5f5f5",
+            borderRadius: "4px",
+            marginBottom: "1rem",
+          }}
+        >
           <p style={{ margin: "0", fontSize: "0.95rem", color: "#666" }}>
-            📍 Salary management has been moved to the <strong>Salaries</strong> tab for better organization. 
-            Use the Salaries page to add employees and manage their salary records.
+            📍 Salary management has been moved to the <strong>Salaries</strong>{" "}
+            tab for better organization. Use the Salaries page to add employees
+            and manage their salary records.
           </p>
         </div>
       </section>

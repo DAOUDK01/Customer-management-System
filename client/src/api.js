@@ -1,7 +1,4 @@
-const API_BASE_URL = import.meta.env.DEV
-  ? "/api"
-  : import.meta.env.VITE_API_BASE_URL ||
-    "https://restaurant-management-system.onrender.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem("rms_token");

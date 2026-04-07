@@ -306,7 +306,10 @@ th {
   border: 1px solid #c3d3ea;
   border-radius: 0.95rem;
   padding: 1rem;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .quick-item-btn:hover {

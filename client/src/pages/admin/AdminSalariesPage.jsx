@@ -39,7 +39,11 @@ export default function AdminSalariesPage() {
         employeeId: firstEmployee._id,
         monthlySalary:
           current.monthlySalary ||
-          String(firstEmployee.monthlySalary || firstEmployee.defaultMonthlySalary || 0),
+          String(
+            firstEmployee.monthlySalary ||
+              firstEmployee.defaultMonthlySalary ||
+              0,
+          ),
       }));
     }
   }
@@ -121,7 +125,9 @@ export default function AdminSalariesPage() {
   return (
     <section className="content-card">
       <h2>Salaries</h2>
-      <p className="muted">Simple flow: create employee once, then add monthly salary.</p>
+      <p className="muted">
+        Simple flow: create employee once, then add monthly salary.
+      </p>
 
       <div className="two-col-grid">
         <form className="form-stack" onSubmit={handleCreateEmployee}>
@@ -172,7 +178,11 @@ export default function AdminSalariesPage() {
               <option value="">Select employee</option>
               {employees.map((employee) => (
                 <option key={employee._id} value={employee._id}>
-                  {employee.name} ({formatINR(employee.monthlySalary || employee.defaultMonthlySalary)})
+                  {employee.name} (
+                  {formatINR(
+                    employee.monthlySalary || employee.defaultMonthlySalary,
+                  )}
+                  )
                 </option>
               ))}
             </select>

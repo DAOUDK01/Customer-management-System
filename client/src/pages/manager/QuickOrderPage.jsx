@@ -170,7 +170,10 @@ export default function QuickOrderPage() {
     <section className="content-card quick-order-shell">
       <div className="quick-order-head">
         <h2>Quick order (click items)</h2>
-        <p className="muted">Select from the menu panel, then review and place order from the cart panel.</p>
+        <p className="muted">
+          Select from the menu panel, then review and place order from the cart
+          panel.
+        </p>
       </div>
 
       <div className="quick-order-layout">

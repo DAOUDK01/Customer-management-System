@@ -99,7 +99,9 @@ export default function AdminAnalyticsPage() {
       );
     } catch (error) {
       try {
-        const result = await apiRequest(`/orders/top-items?month=${selectedMonth}`);
+        const result = await apiRequest(
+          `/orders/top-items?month=${selectedMonth}`,
+        );
         const rows = (result.items || []).map((item) => ({
           Month: selectedMonth,
           Item: item.name,

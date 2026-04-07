@@ -59,14 +59,14 @@ async function createOrder(req, res, next) {
 
 async function listOrders(req, res, next) {
   try {
-    const { status } = req.query;
+    const { status, scope } = req.query;
     const query = {};
 
     if (status && ORDER_STATUSES.includes(status)) {
       query.status = status;
     }
 
-    if (req.user.role === "manager") {
+    if (req.user.role === "manager" && scope !== "all") {
       const { start, end } = getStartAndEndOfDay();
       query.createdAt = { $gte: start, $lte: end };
     }

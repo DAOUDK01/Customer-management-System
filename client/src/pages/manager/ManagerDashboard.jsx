@@ -7,7 +7,7 @@ export default function ManagerDashboard() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    apiRequest("/orders/completed")
+    apiRequest("/orders?status=completed&scope=all")
       .then((result) => setOrders(result.orders || []))
       .catch((error) => setMessage(error.message));
   }, []);

@@ -2,6 +2,30 @@ import { useEffect, useMemo, useState } from "react";
 import { apiDownload, apiRequest } from "../../api";
 import { formatINR } from "../../utils/currency";
 
+function downloadCsv(filename, rows) {
+  const headers = Object.keys(rows[0] || {});
+  const csvLines = [headers.join(",")];
+
+  rows.forEach((row) => {
+    const line = headers
+      .map((key) => {
+        const value = row[key] ?? "";
+        const escaped = String(value).replace(/"/g, '""');
+        return `"${escaped}"`;
+      })
+      .join(",");
+    csvLines.push(line);
+  });
+
+  const blob = new Blob([csvLines.join("\n")], { type: "text/csv" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
+}
+
 export default function AdminAnalyticsPage() {
   const [analytics, setAnalytics] = useState({
     totalOrders: 0,
@@ -14,7 +38,8 @@ export default function AdminAnalyticsPage() {
   });
   const [topItemsByMonth, setTopItemsByMonth] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
-  const [message, setMessage] = useState("");
+  const [analyticsMessage, setAnalyticsMessage] = useState("");
+  const [downloadMessage, setDownloadMessage] = useState("");
 
   async function loadAnalytics() {
     const result = await apiRequest("/orders/analytics");
@@ -24,7 +49,7 @@ export default function AdminAnalyticsPage() {
   }
 
   useEffect(() => {
-    loadAnalytics().catch((error) => setMessage(error.message));
+    loadAnalytics().catch((error) => setAnalyticsMessage(error.message));
   }, []);
 
   async function handleMonthChange(value) {
@@ -38,21 +63,33 @@ export default function AdminAnalyticsPage() {
       const result = await apiRequest(`/orders/top-items?month=${value}`);
       setTopItemsByMonth(result.items || []);
     } catch (error) {
-      setMessage(error.message);
+      setAnalyticsMessage(error.message);
     }
   }
 
   async function handleDownloadRevenue() {
+    setDownloadMessage("");
     try {
       await apiDownload("/orders/export/revenue", "revenue-details.xlsx");
     } catch (error) {
-      setMessage(error.message);
+      try {
+        const rows = (analytics.last7 || []).map((entry) => ({
+          Date: entry.day,
+          Orders: entry.orders,
+          Revenue: entry.revenue,
+        }));
+        downloadCsv("revenue-details.csv", rows);
+        setDownloadMessage("Excel route unavailable, downloaded CSV instead.");
+      } catch {
+        setDownloadMessage(error.message);
+      }
     }
   }
 
   async function handleDownloadTopItems() {
+    setDownloadMessage("");
     if (!selectedMonth) {
-      setMessage("Select month first");
+      setDownloadMessage("Select month first");
       return;
     }
     try {
@@ -61,7 +98,19 @@ export default function AdminAnalyticsPage() {
         `top-items-${selectedMonth}.xlsx`,
       );
     } catch (error) {
-      setMessage(error.message);
+      try {
+        const result = await apiRequest(`/orders/top-items?month=${selectedMonth}`);
+        const rows = (result.items || []).map((item) => ({
+          Month: selectedMonth,
+          Item: item.name,
+          QuantitySold: item.quantity,
+          Revenue: item.revenue,
+        }));
+        downloadCsv(`top-items-${selectedMonth}.csv`, rows);
+        setDownloadMessage("Excel route unavailable, downloaded CSV instead.");
+      } catch {
+        setDownloadMessage(error.message);
+      }
     }
   }
 
@@ -107,7 +156,7 @@ export default function AdminAnalyticsPage() {
 
       <section className="content-card">
         <h2>Last 7 Days Revenue</h2>
-        {message ? <p className="muted">{message}</p> : null}
+        {analyticsMessage ? <p className="muted">{analyticsMessage}</p> : null}
         <div className="table-wrap">
           <table>
             <thead>
@@ -154,6 +203,7 @@ export default function AdminAnalyticsPage() {
             </button>
           </div>
         </div>
+        {downloadMessage ? <p className="muted">{downloadMessage}</p> : null}
         <p className="muted">Month: {monthLabel || "-"}</p>
         <div className="table-wrap">
           <table>

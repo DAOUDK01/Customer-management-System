@@ -249,20 +249,70 @@ th {
   flex-wrap: wrap;
 }
 
+.quick-order-shell {
+  border: 1px solid rgba(59, 130, 246, 0.14);
+}
+
+.quick-order-head {
+  margin-bottom: 0.8rem;
+}
+
+.quick-order-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.quick-order-panel {
+  border: 1px solid #dbe4f1;
+  border-radius: 0.9rem;
+  padding: 0.95rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.quick-order-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.85rem;
+}
+
+.quick-order-panel-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.quick-cart-count {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #e7efff;
+  color: #1e3a8a;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .quick-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.8rem;
-  margin-top: 0.85rem;
 }
 
 .quick-item-btn {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.3rem;
   text-align: left;
   background: #fff;
   color: #111827;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #c3d3ea;
+  border-radius: 0.95rem;
+  padding: 1rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.quick-item-btn:hover {
+  transform: translateY(-2px);
+  border-color: #8fb3e8;
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.12);
 }
 
 .quick-item-btn strong {
@@ -276,6 +326,10 @@ th {
 
 .quick-item-btn small {
   color: #64748b;
+}
+
+.quick-order-cart-panel .table-wrap {
+  margin-top: 0;
 }
 
 .qty-actions {
@@ -330,6 +384,10 @@ ul {
 @media (min-width: 760px) {
   .two-col-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .quick-order-layout {
+    grid-template-columns: minmax(280px, 1fr) minmax(340px, 1.3fr);
   }
 }
 

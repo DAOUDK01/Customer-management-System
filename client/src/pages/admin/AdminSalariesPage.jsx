@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "../../api";
 import { formatINR } from "../../utils/currency";
 
+function getCurrentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export default function AdminSalariesPage() {
+  const currentMonth = getCurrentMonth();
   const [salaries, setSalaries] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [message, setMessage] = useState("");
@@ -13,15 +19,29 @@ export default function AdminSalariesPage() {
   });
   const [salaryForm, setSalaryForm] = useState({
     employeeId: "",
-    month: "",
+    month: currentMonth,
     monthlySalary: "",
     extraReceived: "0",
   });
 
   async function loadSalaries() {
     const result = await apiRequest("/salaries");
-    setSalaries(result.salaries || []);
-    setEmployees(result.employees || []);
+    const loadedSalaries = result.salaries || [];
+    const loadedEmployees = result.employees || [];
+
+    setSalaries(loadedSalaries);
+    setEmployees(loadedEmployees);
+
+    if (!salaryForm.employeeId && loadedEmployees.length > 0) {
+      const firstEmployee = loadedEmployees[0];
+      setSalaryForm((current) => ({
+        ...current,
+        employeeId: firstEmployee._id,
+        monthlySalary:
+          current.monthlySalary ||
+          String(firstEmployee.monthlySalary || firstEmployee.defaultMonthlySalary || 0),
+      }));
+    }
   }
 
   useEffect(() => {
@@ -46,8 +66,8 @@ export default function AdminSalariesPage() {
 
       setMessage("Monthly salary saved");
       setSalaryForm({
-        employeeId: "",
-        month: "",
+        employeeId: salaryForm.employeeId,
+        month: currentMonth,
         monthlySalary: "",
         extraReceived: "0",
       });
@@ -100,11 +120,12 @@ export default function AdminSalariesPage() {
 
   return (
     <section className="content-card">
-      <h2>Employee Salaries</h2>
+      <h2>Salaries</h2>
+      <p className="muted">Simple flow: create employee once, then add monthly salary.</p>
 
       <div className="two-col-grid">
         <form className="form-stack" onSubmit={handleCreateEmployee}>
-          <h3>Create Employee</h3>
+          <h3>1. Create Employee</h3>
           <label>
             Employee name
             <input
@@ -140,7 +161,7 @@ export default function AdminSalariesPage() {
         </form>
 
         <form className="form-stack" onSubmit={handleCreateSalary}>
-          <h3>Add Monthly Salary</h3>
+          <h3>2. Add Monthly Salary</h3>
           <label>
             Employee
             <select
@@ -151,7 +172,7 @@ export default function AdminSalariesPage() {
               <option value="">Select employee</option>
               {employees.map((employee) => (
                 <option key={employee._id} value={employee._id}>
-                  {employee.name}
+                  {employee.name} ({formatINR(employee.monthlySalary || employee.defaultMonthlySalary)})
                 </option>
               ))}
             </select>
@@ -214,24 +235,18 @@ export default function AdminSalariesPage() {
           <thead>
             <tr>
               <th>Employee</th>
-              <th>Month</th>
-              <th>Monthly Salary</th>
-              <th>Monthly Receiving</th>
-              <th>Extra Received</th>
-              <th>Deduction Applied</th>
+              <th>This Month Salary</th>
+              <th>This Month Receiving</th>
               <th>Outstanding Advance</th>
             </tr>
           </thead>
           <tbody>
-            {salaries.map((salary) => (
-              <tr key={salary._id}>
-                <td>{salary.employeeName}</td>
-                <td>{salary.month}</td>
-                <td>{formatINR(salary.monthlySalary)}</td>
-                <td>{formatINR(salary.monthlyReceiving)}</td>
-                <td>{formatINR(salary.extraReceived)}</td>
-                <td>{formatINR(salary.deductionApplied)}</td>
-                <td>{formatINR(salary.outstandingAdvanceAfter)}</td>
+            {employees.map((employee) => (
+              <tr key={employee._id}>
+                <td>{employee.name}</td>
+                <td>{formatINR(employee.monthlySalary)}</td>
+                <td>{formatINR(employee.monthlyReceiving)}</td>
+                <td>{formatINR(employee.outstandingAdvance)}</td>
               </tr>
             ))}
           </tbody>
@@ -243,18 +258,22 @@ export default function AdminSalariesPage() {
           <thead>
             <tr>
               <th>Employee</th>
-              <th>Current Month Salary</th>
-              <th>Current Month Receiving</th>
-              <th>Outstanding Advance</th>
+              <th>Month</th>
+              <th>Salary</th>
+              <th>Receiving</th>
+              <th>Extra</th>
+              <th>Deduction</th>
             </tr>
           </thead>
           <tbody>
-            {employees.map((employee) => (
-              <tr key={employee._id}>
-                <td>{employee.name}</td>
-                <td>{formatINR(employee.monthlySalary)}</td>
-                <td>{formatINR(employee.monthlyReceiving)}</td>
-                <td>{formatINR(employee.outstandingAdvance)}</td>
+            {salaries.slice(0, 12).map((salary) => (
+              <tr key={salary._id}>
+                <td>{salary.employeeName}</td>
+                <td>{salary.month}</td>
+                <td>{formatINR(salary.monthlySalary)}</td>
+                <td>{formatINR(salary.monthlyReceiving)}</td>
+                <td>{formatINR(salary.extraReceived)}</td>
+                <td>{formatINR(salary.deductionApplied)}</td>
               </tr>
             ))}
           </tbody>

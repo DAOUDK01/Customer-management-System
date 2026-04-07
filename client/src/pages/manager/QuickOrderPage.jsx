@@ -167,90 +167,111 @@ export default function QuickOrderPage() {
   }
 
   return (
-    <section className="content-card">
-      <h2>Quick order (click items)</h2>
-      <p className="muted">Tap any item to add it to the order cart.</p>
-
-      <div className="quick-grid">
-        {items.map((item) => (
-          <button
-            key={item._id}
-            type="button"
-            className="quick-item-btn"
-            onClick={() => addItemToCart(item)}
-          >
-            <strong>{item.name}</strong>
-            <span>{formatINR(item.price)}</span>
-            <small>Tap to add</small>
-          </button>
-        ))}
+    <section className="content-card quick-order-shell">
+      <div className="quick-order-head">
+        <h2>Quick order (click items)</h2>
+        <p className="muted">Select from the menu panel, then review and place order from the cart panel.</p>
       </div>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Price</th>
-              <th>Qty</th>
-              <th>Line Total</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cart.map((entry) => (
-              <tr key={entry.itemId}>
-                <td>{entry.name}</td>
-                <td>{formatINR(entry.price)}</td>
-                <td>{entry.quantity}</td>
-                <td>
-                  {formatINR(Number(entry.price) * Number(entry.quantity))}
-                </td>
-                <td>
-                  <div className="qty-actions">
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() =>
-                        updateQuantity(entry.itemId, entry.quantity - 1)
-                      }
-                    >
-                      -
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() =>
-                        updateQuantity(entry.itemId, entry.quantity + 1)
-                      }
-                    >
-                      +
-                    </button>
-                  </div>
-                </td>
-              </tr>
+      <div className="quick-order-layout">
+        <article className="quick-order-panel">
+          <div className="quick-order-panel-head">
+            <h3>Menu Items</h3>
+            <span className="muted">Tap to add in cart</span>
+          </div>
+          <div className="quick-grid">
+            {items.map((item) => (
+              <button
+                key={item._id}
+                type="button"
+                className="quick-item-btn"
+                onClick={() => addItemToCart(item)}
+              >
+                <strong>{item.name}</strong>
+                <span>{formatINR(item.price)}</span>
+                <small>Tap to add</small>
+              </button>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </article>
 
-      <p className="receipt-total">Order Total: {formatINR(cartTotal)}</p>
-      {message ? <p className="muted">{message}</p> : null}
+        <article className="quick-order-panel quick-order-cart-panel">
+          <div className="quick-order-panel-head">
+            <h3>Current Cart</h3>
+            <span className="quick-cart-count">{cart.length} item(s)</span>
+          </div>
 
-      <div className="receipt-actions">
-        <button type="button" onClick={handlePlaceOrder} disabled={loading}>
-          {loading ? "Placing..." : "Place order"}
-        </button>
-        <button type="button" className="secondary-button" onClick={clearCart}>
-          Clear cart
-        </button>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => printThermalReceipt(receipt)}
-        >
-          Print thermal POS
-        </button>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Price</th>
+                  <th>Qty</th>
+                  <th>Line Total</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cart.map((entry) => (
+                  <tr key={entry.itemId}>
+                    <td>{entry.name}</td>
+                    <td>{formatINR(entry.price)}</td>
+                    <td>{entry.quantity}</td>
+                    <td>
+                      {formatINR(Number(entry.price) * Number(entry.quantity))}
+                    </td>
+                    <td>
+                      <div className="qty-actions">
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() =>
+                            updateQuantity(entry.itemId, entry.quantity - 1)
+                          }
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() =>
+                            updateQuantity(entry.itemId, entry.quantity + 1)
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="receipt-total">Order Total: {formatINR(cartTotal)}</p>
+          {message ? <p className="muted">{message}</p> : null}
+
+          <div className="receipt-actions">
+            <button type="button" onClick={handlePlaceOrder} disabled={loading}>
+              {loading ? "Placing..." : "Place order"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={clearCart}
+            >
+              Clear cart
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => printThermalReceipt(receipt)}
+            >
+              Print thermal POS
+            </button>
+          </div>
+        </article>
       </div>
     </section>
   );

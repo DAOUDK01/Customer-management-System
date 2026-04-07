@@ -16,6 +16,14 @@ export default function ManagerLayout() {
 
       <nav className="manager-nav">
         <NavLink
+          to="/manager/dashboard"
+          className={({ isActive }) =>
+            isActive ? "manager-nav-link active" : "manager-nav-link"
+          }
+        >
+          Dashboard
+        </NavLink>
+        <NavLink
           to="/manager/quick-order"
           className={({ isActive }) =>
             isActive ? "manager-nav-link active" : "manager-nav-link"
@@ -38,14 +46,6 @@ export default function ManagerLayout() {
           }
         >
           Manage Orders
-        </NavLink>
-        <NavLink
-          to="/manager/stock"
-          className={({ isActive }) =>
-            isActive ? "manager-nav-link active" : "manager-nav-link"
-          }
-        >
-          Manage Stock
         </NavLink>
       </nav>
 

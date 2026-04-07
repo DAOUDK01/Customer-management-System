@@ -1,4 +1,7 @@
 const Order = require("../models/Order");
+const XLSX = require("xlsx");
+
+const ORDER_STATUSES = ["processing", "completed", "cancelled"];
 
 function calculateTotal(items) {
   return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -45,9 +48,7 @@ async function createOrder(req, res, next) {
       items: normalizedItems,
       totalAmount,
       status:
-        status && ["processing", "completed", "incomplete"].includes(status)
-          ? status
-          : "processing",
+        status && ORDER_STATUSES.includes(status) ? status : "processing",
       createdBy: req.user.id,
     });
 
@@ -62,7 +63,7 @@ async function listOrders(req, res, next) {
     const { status } = req.query;
     const query = {};
 
-    if (status && ["processing", "completed", "incomplete"].includes(status)) {
+    if (status && ORDER_STATUSES.includes(status)) {
       query.status = status;
     }
 
@@ -79,13 +80,28 @@ async function listOrders(req, res, next) {
   }
 }
 
+async function listCompletedOrders(req, res, next) {
+  try {
+    const orders = await Order.find({ status: "completed" }).sort({ createdAt: -1 });
+    return res.json({ orders });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function updateOrderStatus(req, res, next) {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!["processing", "completed", "incomplete"].includes(status)) {
+    if (!ORDER_STATUSES.includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
+    }
+
+    if (req.user.role === "admin" && status === "processing") {
+      return res
+        .status(400)
+        .json({ message: "Admin can set only completed or cancelled status" });
     }
 
     const order = await Order.findById(id);
@@ -150,7 +166,7 @@ async function getTodayRevenue(req, res, next) {
     const [summary] = await Order.aggregate([
       {
         $match: {
-          status: { $ne: "incomplete" },
+          status: "completed",
           createdAt: { $gte: start, $lte: end },
         },
       },
@@ -185,7 +201,7 @@ async function getAdminRevenueSummary(req, res, next) {
       Order.aggregate([
         {
           $match: {
-            status: { $ne: "incomplete" },
+            status: "completed",
             createdAt: { $gte: startOfDay },
           },
         },
@@ -194,7 +210,7 @@ async function getAdminRevenueSummary(req, res, next) {
       Order.aggregate([
         {
           $match: {
-            status: { $ne: "incomplete" },
+            status: "completed",
             createdAt: { $gte: startOfMonth },
           },
         },
@@ -203,7 +219,7 @@ async function getAdminRevenueSummary(req, res, next) {
       Order.aggregate([
         {
           $match: {
-            status: { $ne: "incomplete" },
+            status: "completed",
             createdAt: { $gte: startOfYear },
           },
         },
@@ -243,7 +259,7 @@ async function getRevenueByDateRange(req, res, next) {
     const [summary] = await Order.aggregate([
       {
         $match: {
-          status: { $ne: "incomplete" },
+          status: "completed",
           createdAt: { $gte: fromDate, $lte: toDate },
         },
       },
@@ -265,13 +281,276 @@ async function getRevenueByDateRange(req, res, next) {
   }
 }
 
+function getDateLabel(dateValue) {
+  const date = new Date(dateValue);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function getMonthKey(value) {
+  if (typeof value === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
+    return value;
+  }
+
+  const date = new Date(value || Date.now());
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+async function getAdminAnalytics(req, res, next) {
+  try {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const allOrders = await Order.find().sort({ createdAt: -1 }).lean();
+    const completedOrders = allOrders.filter((order) => order.status === "completed");
+
+    const byStatus = {
+      processing: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+
+    const last7DailyMap = {};
+    const monthItemMap = {};
+    const currentMonth = getMonthKey(now);
+
+    allOrders.forEach((order) => {
+      if (order.status in byStatus) {
+        byStatus[order.status] += 1;
+      }
+
+      if (order.status !== "completed") {
+        return;
+      }
+
+      const createdAt = new Date(order.createdAt);
+      if (createdAt >= sevenDaysAgo) {
+        const key = getDateLabel(createdAt);
+        if (!last7DailyMap[key]) {
+          last7DailyMap[key] = { day: key, orders: 0, revenue: 0 };
+        }
+        last7DailyMap[key].orders += 1;
+        last7DailyMap[key].revenue += Number(order.totalAmount || 0);
+      }
+
+      if (getMonthKey(createdAt) === currentMonth) {
+        (order.items || []).forEach((item) => {
+          if (!monthItemMap[item.name]) {
+            monthItemMap[item.name] = {
+              name: item.name,
+              quantity: 0,
+              revenue: 0,
+            };
+          }
+
+          monthItemMap[item.name].quantity += Number(item.quantity || 0);
+          monthItemMap[item.name].revenue +=
+            Number(item.quantity || 0) * Number(item.price || 0);
+        });
+      }
+    });
+
+    const last7 = [];
+    for (let i = 6; i >= 0; i -= 1) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      const key = getDateLabel(date);
+      last7.push(last7DailyMap[key] || { day: key, orders: 0, revenue: 0 });
+    }
+
+    const totalRevenue = completedOrders.reduce(
+      (sum, order) => sum + Number(order.totalAmount || 0),
+      0,
+    );
+
+    const topItemsCurrentMonth = Object.values(monthItemMap)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 10);
+
+    return res.json({
+      totalOrders: allOrders.length,
+      totalRevenue,
+      averageOrderValue:
+        completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0,
+      byStatus,
+      last7,
+      currentMonth,
+      topItemsCurrentMonth,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function downloadRevenueExcel(req, res, next) {
+  try {
+    const { from, to } = req.query;
+
+    let fromDate;
+    let toDate;
+
+    if (from && to) {
+      fromDate = new Date(from);
+      toDate = new Date(to);
+
+      if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+        return res.status(400).json({ message: "Invalid from/to date" });
+      }
+      toDate.setHours(23, 59, 59, 999);
+    } else {
+      const now = new Date();
+      fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      toDate = new Date(now);
+      toDate.setHours(23, 59, 59, 999);
+    }
+
+    const orders = await Order.find({
+      status: "completed",
+      createdAt: { $gte: fromDate, $lte: toDate },
+    })
+      .sort({ createdAt: 1 })
+      .lean();
+
+    const dailyMap = orders.reduce((accumulator, order) => {
+      const day = getDateLabel(order.createdAt);
+      if (!accumulator[day]) {
+        accumulator[day] = { Date: day, CompletedOrders: 0, Revenue: 0 };
+      }
+      accumulator[day].CompletedOrders += 1;
+      accumulator[day].Revenue += Number(order.totalAmount || 0);
+      return accumulator;
+    }, {});
+
+    const rows = Object.values(dailyMap);
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, sheet, "Revenue");
+
+    const fileBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", "attachment; filename=revenue-details.xlsx");
+
+    return res.send(fileBuffer);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getTopItemsByMonth(req, res, next) {
+  try {
+    const month = getMonthKey(req.query.month || new Date());
+    if (!month) {
+      return res.status(400).json({ message: "month must be YYYY-MM" });
+    }
+
+    const [year, monthNumber] = month.split("-").map(Number);
+    const start = new Date(year, monthNumber - 1, 1);
+    const end = new Date(year, monthNumber, 0, 23, 59, 59, 999);
+
+    const orders = await Order.find({
+      status: "completed",
+      createdAt: { $gte: start, $lte: end },
+    }).lean();
+
+    const itemMap = {};
+    orders.forEach((order) => {
+      (order.items || []).forEach((item) => {
+        if (!itemMap[item.name]) {
+          itemMap[item.name] = {
+            name: item.name,
+            quantity: 0,
+            revenue: 0,
+          };
+        }
+        itemMap[item.name].quantity += Number(item.quantity || 0);
+        itemMap[item.name].revenue += Number(item.quantity || 0) * Number(item.price || 0);
+      });
+    });
+
+    const items = Object.values(itemMap)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 15);
+
+    return res.json({ month, items });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function downloadTopItemsExcel(req, res, next) {
+  try {
+    const month = getMonthKey(req.query.month || new Date());
+    if (!month) {
+      return res.status(400).json({ message: "month must be YYYY-MM" });
+    }
+
+    const [year, monthNumber] = month.split("-").map(Number);
+    const start = new Date(year, monthNumber - 1, 1);
+    const end = new Date(year, monthNumber, 0, 23, 59, 59, 999);
+
+    const orders = await Order.find({
+      status: "completed",
+      createdAt: { $gte: start, $lte: end },
+    }).lean();
+
+    const itemMap = {};
+    orders.forEach((order) => {
+      (order.items || []).forEach((item) => {
+        if (!itemMap[item.name]) {
+          itemMap[item.name] = {
+            Item: item.name,
+            QuantitySold: 0,
+            Revenue: 0,
+            Month: month,
+          };
+        }
+        itemMap[item.name].QuantitySold += Number(item.quantity || 0);
+        itemMap[item.name].Revenue += Number(item.quantity || 0) * Number(item.price || 0);
+      });
+    });
+
+    const rows = Object.values(itemMap).sort(
+      (a, b) => b.QuantitySold - a.QuantitySold,
+    );
+
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, sheet, "TopItems");
+    const fileBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename=top-items-${month}.xlsx`);
+
+    return res.send(fileBuffer);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   createOrder,
   listOrders,
+  listCompletedOrders,
   updateOrderStatus,
   deleteOrder,
   deleteOldOrders,
   getTodayRevenue,
   getAdminRevenueSummary,
   getRevenueByDateRange,
+  getAdminAnalytics,
+  getTopItemsByMonth,
+  downloadRevenueExcel,
+  downloadTopItemsExcel,
 };

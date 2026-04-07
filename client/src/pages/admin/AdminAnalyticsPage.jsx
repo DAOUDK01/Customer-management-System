@@ -1,93 +1,75 @@
 
-
 import { useEffect, useMemo, useState } from "react";
-import { apiRequest } from "../../api";
+import { apiDownload, apiRequest } from "../../api";
 import { formatINR } from "../../utils/currency";
 
-function dateKey(value) {
-  const date = new Date(value);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function getLastNDays(n) {
-  const days = [];
-  const now = new Date();
-  for (let i = n - 1; i >= 0; i -= 1) {
-    const date = new Date(now);
-    date.setDate(now.getDate() - i);
-    days.push(dateKey(date));
-  }
-  return days;
-}
-
 export default function AdminAnalyticsPage() {
-  const [orders, setOrders] = useState([]);
+  const [analytics, setAnalytics] = useState({
+    totalOrders: 0,
+    totalRevenue: 0,
+    averageOrderValue: 0,
+    byStatus: { processing: 0, completed: 0, cancelled: 0 },
+    last7: [],
+    currentMonth: "",
+    topItemsCurrentMonth: [],
+  });
+  const [topItemsByMonth, setTopItemsByMonth] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState("");
   const [message, setMessage] = useState("");
 
+  async function loadAnalytics() {
+    const result = await apiRequest("/orders/analytics");
+    setAnalytics(result);
+    setSelectedMonth(result.currentMonth);
+    setTopItemsByMonth(result.topItemsCurrentMonth || []);
+  }
+
   useEffect(() => {
-    apiRequest("/orders")
-      .then((result) => setOrders(result.orders || []))
-      .catch((error) => setMessage(error.message));
+    loadAnalytics().catch((error) => setMessage(error.message));
   }, []);
 
-  const analytics = useMemo(() => {
-    const totalOrders = orders.length;
-    const totalRevenue = orders.reduce(
-      (sum, order) => sum + Number(order.totalAmount || 0),
-      0,
-    );
-    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  async function handleMonthChange(value) {
+    setSelectedMonth(value);
+    if (!value) {
+      setTopItemsByMonth([]);
+      return;
+    }
 
-    const byStatus = orders.reduce(
-      (accumulator, order) => {
-        accumulator[order.status] = (accumulator[order.status] || 0) + 1;
-        return accumulator;
-      },
-      { processing: 0, completed: 0, incomplete: 0 },
-    );
+    try {
+      const result = await apiRequest(`/orders/top-items?month=${value}`);
+      setTopItemsByMonth(result.items || []);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
 
-    const dailyMap = orders.reduce((accumulator, order) => {
-      const key = dateKey(order.createdAt);
-      if (!accumulator[key]) {
-        accumulator[key] = { revenue: 0, orders: 0 };
-      }
-      accumulator[key].revenue += Number(order.totalAmount || 0);
-      accumulator[key].orders += 1;
-      return accumulator;
-    }, {});
+  async function handleDownloadRevenue() {
+    try {
+      await apiDownload("/orders/export/revenue", "revenue-details.xlsx");
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
 
-    const last7 = getLastNDays(7).map((day) => ({
-      day,
-      revenue: dailyMap[day]?.revenue || 0,
-      orders: dailyMap[day]?.orders || 0,
-    }));
+  async function handleDownloadTopItems() {
+    if (!selectedMonth) {
+      setMessage("Select month first");
+      return;
+    }
+    try {
+      await apiDownload(
+        `/orders/export/top-items?month=${selectedMonth}`,
+        `top-items-${selectedMonth}.xlsx`,
+      );
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
 
-    const itemMap = {};
-    orders.forEach((order) => {
-      (order.items || []).forEach((item) => {
-        const key = item.name;
-        if (!itemMap[key]) {
-          itemMap[key] = { name: key, quantity: 0, revenue: 0 };
-        }
-        itemMap[key].quantity += Number(item.quantity || 0);
-        itemMap[key].revenue +=
-          Number(item.price || 0) * Number(item.quantity || 0);
-      });
-    });
-
-    const topItems = Object.values(itemMap)
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 8);
-
-    return {
-      totalOrders,
-      totalRevenue,
-      averageOrderValue,
-      byStatus,
-      last7,
-      topItems,
-    };
-  }, [orders]);
+  const monthLabel = useMemo(() => selectedMonth || analytics.currentMonth, [
+    selectedMonth,
+    analytics.currentMonth,
+  ]);
 
   return (
     <>
@@ -118,8 +100,8 @@ export default function AdminAnalyticsPage() {
             <strong>{analytics.byStatus.completed || 0}</strong>
           </article>
           <article className="stat-card">
-            <span>Incomplete</span>
-            <strong>{analytics.byStatus.incomplete || 0}</strong>
+            <span>Cancelled</span>
+            <strong>{analytics.byStatus.cancelled || 0}</strong>
           </article>
         </div>
       </section>
@@ -150,7 +132,30 @@ export default function AdminAnalyticsPage() {
       </section>
 
       <section className="content-card">
-        <h2>Top Selling Items</h2>
+        <h2>Top Selling Items by Month</h2>
+        <div className="inline-controls two-col-grid">
+          <label>
+            Select month
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(event) => handleMonthChange(event.target.value)}
+            />
+          </label>
+          <div className="download-actions">
+            <button type="button" onClick={handleDownloadRevenue}>
+              Download Revenue Excel
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={handleDownloadTopItems}
+            >
+              Download Top Items Excel
+            </button>
+          </div>
+        </div>
+        <p className="muted">Month: {monthLabel || "-"}</p>
         <div className="table-wrap">
           <table>
             <thead>
@@ -161,7 +166,7 @@ export default function AdminAnalyticsPage() {
               </tr>
             </thead>
             <tbody>
-              {analytics.topItems.map((item) => (
+              {topItemsByMonth.map((item) => (
                 <tr key={item.name}>
                   <td>{item.name}</td>
                   <td>{item.quantity}</td>

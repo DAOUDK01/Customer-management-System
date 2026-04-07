@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "../../api";
 import { formatINR } from "../../utils/currency";
 
+const ADMIN_ORDER_STATUS = ["completed", "cancelled"];
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
@@ -10,7 +12,10 @@ export default function AdminOrdersPage() {
 
   async function loadOrders() {
     const result = await apiRequest("/orders");
-    setOrders(result.orders || []);
+    const adminOrders = (result.orders || []).filter((order) =>
+      ADMIN_ORDER_STATUS.includes(order.status),
+    );
+    setOrders(adminOrders);
   }
 
   useEffect(() => {
@@ -41,6 +46,20 @@ export default function AdminOrdersPage() {
       await apiRequest(`/orders/${orderId}`, { method: "DELETE" });
       setMessage("Order deleted");
       setSelectedIds(new Set());
+      await loadOrders();
+    } catch (requestError) {
+      setMessage(requestError.message);
+    }
+  }
+
+  async function handleStatusUpdate(orderId, status) {
+    setMessage("");
+    try {
+      await apiRequest(`/orders/${orderId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      setMessage("Order status updated");
       await loadOrders();
     } catch (requestError) {
       setMessage(requestError.message);
@@ -143,7 +162,20 @@ export default function AdminOrdersPage() {
                     .join(", ")}
                 </td>
                 <td>{formatINR(order.totalAmount)}</td>
-                <td>{order.status}</td>
+                <td>
+                  <select
+                    value={order.status}
+                    onChange={(event) =>
+                      handleStatusUpdate(order._id, event.target.value)
+                    }
+                  >
+                    {ADMIN_ORDER_STATUS.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td>
                   <button
                     type="button"

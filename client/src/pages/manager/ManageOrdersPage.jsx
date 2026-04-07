@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "../../api";
 import { formatINR } from "../../utils/currency";
 
-const ORDER_STATUS = ["processing", "completed", "incomplete"];
+const ORDER_STATUS = ["processing", "completed", "cancelled"];
 
 export default function ManageOrdersPage() {
   const [todayRevenue, setTodayRevenue] = useState(0);

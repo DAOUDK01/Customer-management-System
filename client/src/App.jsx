@@ -7,10 +7,10 @@ import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
 import AdminSalariesPage from "./pages/admin/AdminSalariesPage";
 import AdminAnalyticsPage from "./pages/admin/AdminAnalyticsPage";
 import ManagerLayout from "./pages/manager/ManagerLayout";
+import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import QuickOrderPage from "./pages/manager/QuickOrderPage";
 import ManageOrdersPage from "./pages/manager/ManageOrdersPage";
 import MenuItemsPage from "./pages/manager/MenuItemsPage";
-import ManageStockPage from "./pages/manager/ManageStockPage";
 
 function ProtectedRoute({ allowedRoles, children }) {
   const { user, token } = useAuth();
@@ -63,7 +63,8 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="quick-order" replace />} />
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<ManagerDashboard />} />
         <Route
           path="create-order"
           element={<Navigate to="/manager/quick-order" replace />}
@@ -71,11 +72,10 @@ export default function App() {
         <Route path="items" element={<Navigate to="/manager/menu" replace />} />
         <Route path="quick-order" element={<QuickOrderPage />} />
         <Route path="menu" element={<MenuItemsPage />} />
-        <Route path="stock" element={<ManageStockPage />} />
         <Route path="orders" element={<ManageOrdersPage />} />
         <Route
           path="*"
-          element={<Navigate to="/manager/quick-order" replace />}
+          element={<Navigate to="/manager/dashboard" replace />}
         />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />

@@ -162,12 +162,10 @@ async function createSalary(req, res, next) {
       Number.isNaN(parsedExtraReceived) ||
       parsedExtraReceived < 0
     ) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "monthlySalary and extraReceived must be valid positive numbers",
-        });
+      return res.status(400).json({
+        message:
+          "monthlySalary and extraReceived must be valid positive numbers",
+      });
     }
 
     const outstandingBefore = await getOutstandingAdvanceBefore(

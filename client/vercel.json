@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://restaurant-management-system.onrender.com/api/$1"
+      "destination": "https://customer-management-system-yqa3.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",

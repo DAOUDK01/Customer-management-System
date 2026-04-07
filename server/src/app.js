@@ -11,12 +11,37 @@ const { notFound, errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
 
-const allowedOrigins =
-  process.env.NODE_ENV === "production" && process.env.FRONTEND_ORIGIN
-    ? process.env.FRONTEND_ORIGIN.split(",").map((origin) => origin.trim())
-    : true;
+const configuredOrigins = process.env.FRONTEND_ORIGIN
+  ? process.env.FRONTEND_ORIGIN.split(",").map((origin) => origin.trim())
+  : [];
 
-app.use(cors({ origin: allowedOrigins }));
+function isAllowedOrigin(origin) {
+  if (!origin) {
+    return true;
+  }
+
+  if (configuredOrigins.includes(origin)) {
+    return true;
+  }
+
+  return (
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("http://127.0.0.1:") ||
+    origin.endsWith(".vercel.app")
+  );
+}
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+  }),
+);
 app.use(express.json());
 
 app.use("/api/health", healthRoutes);

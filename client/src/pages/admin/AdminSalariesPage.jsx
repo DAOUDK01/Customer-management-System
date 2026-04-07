@@ -89,7 +89,7 @@ export default function AdminSalariesPage() {
     setLoading(true);
 
     try {
-      await apiRequest("/salaries/employees", {
+      await apiRequest("/salaries", {
         method: "POST",
         body: JSON.stringify({
           name: employeeForm.name,

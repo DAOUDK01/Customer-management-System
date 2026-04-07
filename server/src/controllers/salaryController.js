@@ -120,7 +120,12 @@ async function createSalary(req, res, next) {
     } = req.body;
 
     // Handle employee creation
-    if (!employeeId && name && (defaultMonthlySalary !== undefined && defaultMonthlySalary !== "")) {
+    if (
+      !employeeId &&
+      name &&
+      defaultMonthlySalary !== undefined &&
+      defaultMonthlySalary !== ""
+    ) {
       const salary = Number(defaultMonthlySalary);
       if (Number.isNaN(salary)) {
         return res

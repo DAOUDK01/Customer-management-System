@@ -1,6 +1,6 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV ? "http://localhost:5001/api" : "/api");
+  "/api";
 
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem("rms_token");
@@ -13,10 +13,16 @@ export async function apiRequest(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    throw new Error(`Unable to reach the API at ${API_BASE_URL}${path}`);
+  }
 
   const payload = await response.json().catch(() => ({}));
 

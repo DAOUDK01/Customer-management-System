@@ -356,6 +356,122 @@ th {
   gap: 1rem;
 }
 
+.salary-create-bar {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #dbe4f1;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.salary-create-bar h3 {
+  margin-bottom: 0.25rem;
+}
+
+.salary-create-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.employee-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin-top: 1rem;
+}
+
+.employee-card {
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+  background: white;
+  color: #0f172a;
+  border: 1px solid #d4dfef;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.employee-card.active {
+  background: #0f172a;
+  color: white;
+  border-color: #0f172a;
+}
+
+.employee-card strong {
+  font-size: 1rem;
+}
+
+.employee-card span {
+  font-weight: 700;
+}
+
+.employee-card small {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.salary-detail-layout {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.detail-card {
+  border: 1px solid #dbe4f1;
+  border-radius: 1rem;
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.detail-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.detail-summary {
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.9rem;
+  background: #eef4ff;
+  min-width: 160px;
+}
+
+.detail-summary span {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.detail-summary strong {
+  font-size: 1.2rem;
+}
+
+.salary-inline-form {
+  margin-top: 1rem;
+}
+
+@media (min-width: 960px) {
+  .salary-detail-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .salary-create-bar {
+    grid-template-columns: 1fr auto;
+    align-items: end;
+  }
+
+  .salary-create-form {
+    grid-template-columns: 1fr 1fr auto;
+    align-items: end;
+  }
+}
+
 .download-actions {
   display: flex;
   align-items: flex-end;

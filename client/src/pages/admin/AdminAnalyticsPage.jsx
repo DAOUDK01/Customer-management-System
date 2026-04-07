@@ -1,23 +1,39 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiDownload, apiRequest } from "../../api";
+import * as XLSX from "xlsx";
+import { apiRequest } from "../../api";
 import { formatINR } from "../../utils/currency";
 
-function downloadCsv(filename, rows) {
-  const headers = Object.keys(rows[0] || {});
-  const csvLines = [headers.join(",")];
+function getMonthKey(value) {
+  const date = new Date(value || Date.now());
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
 
-  rows.forEach((row) => {
-    const line = headers
-      .map((key) => {
-        const value = row[key] ?? "";
-        const escaped = String(value).replace(/"/g, '""');
-        return `"${escaped}"`;
-      })
-      .join(",");
-    csvLines.push(line);
+function getDateKey(value) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function getLastNDays(count) {
+  const days = [];
+  const today = new Date();
+
+  for (let index = count - 1; index >= 0; index -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - index);
+    days.push(getDateKey(date));
+  }
+
+  return days;
+}
+
+function downloadWorkbook(filename, sheetName, rows) {
+  const workbook = XLSX.utils.book_new();
+  const sheet = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(workbook, sheet, sheetName);
+  const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
-
-  const blob = new Blob([csvLines.join("\n")], { type: "text/csv" });
   const url = window.URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -26,100 +42,142 @@ function downloadCsv(filename, rows) {
   window.URL.revokeObjectURL(url);
 }
 
-export default function AdminAnalyticsPage() {
-  const [analytics, setAnalytics] = useState({
-    totalOrders: 0,
-    totalRevenue: 0,
-    averageOrderValue: 0,
-    byStatus: { processing: 0, completed: 0, cancelled: 0 },
-    last7: [],
-    currentMonth: "",
-    topItemsCurrentMonth: [],
+function buildAnalytics(orders) {
+  const completedOrders = orders.filter((order) => order.status === "completed");
+  const totalRevenue = completedOrders.reduce(
+    (sum, order) => sum + Number(order.totalAmount || 0),
+    0,
+  );
+
+  const byStatus = orders.reduce(
+    (accumulator, order) => {
+      if (accumulator[order.status] !== undefined) {
+        accumulator[order.status] += 1;
+      }
+      return accumulator;
+    },
+    { processing: 0, completed: 0, cancelled: 0 },
+  );
+
+  const dailyMap = completedOrders.reduce((accumulator, order) => {
+    const day = getDateKey(order.createdAt);
+    if (!accumulator[day]) {
+      accumulator[day] = { day, orders: 0, revenue: 0 };
+    }
+    accumulator[day].orders += 1;
+    accumulator[day].revenue += Number(order.totalAmount || 0);
+    return accumulator;
+  }, {});
+
+  const last7 = getLastNDays(7).map((day) =>
+    dailyMap[day] || { day, orders: 0, revenue: 0 },
+  );
+
+  return {
+    totalOrders: orders.length,
+    totalRevenue,
+    averageOrderValue:
+      completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0,
+    byStatus,
+    last7,
+    completedOrders,
+    currentMonth: getMonthKey(new Date()),
+  };
+}
+
+function getTopItemsForMonth(completedOrders, monthKey) {
+  if (!monthKey) {
+    return [];
+  }
+
+  const [year, month] = monthKey.split("-").map(Number);
+  const monthOrders = completedOrders.filter((order) => {
+    const date = new Date(order.createdAt);
+    return date.getFullYear() === year && date.getMonth() + 1 === month;
   });
-  const [topItemsByMonth, setTopItemsByMonth] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState("");
+
+  const itemMap = monthOrders.reduce((accumulator, order) => {
+    (order.items || []).forEach((item) => {
+      if (!accumulator[item.name]) {
+        accumulator[item.name] = {
+          name: item.name,
+          quantity: 0,
+          revenue: 0,
+        };
+      }
+
+      accumulator[item.name].quantity += Number(item.quantity || 0);
+      accumulator[item.name].revenue +=
+        Number(item.quantity || 0) * Number(item.price || 0);
+    });
+
+    return accumulator;
+  }, {});
+
+  return Object.values(itemMap).sort((a, b) => b.quantity - a.quantity);
+}
+
+export default function AdminAnalyticsPage() {
+  const [orders, setOrders] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(getMonthKey(new Date()));
   const [analyticsMessage, setAnalyticsMessage] = useState("");
   const [downloadMessage, setDownloadMessage] = useState("");
 
-  async function loadAnalytics() {
-    const result = await apiRequest("/orders/analytics");
-    setAnalytics(result);
-    setSelectedMonth(result.currentMonth);
-    setTopItemsByMonth(result.topItemsCurrentMonth || []);
-  }
-
   useEffect(() => {
-    loadAnalytics().catch((error) => setAnalyticsMessage(error.message));
+    apiRequest("/orders?scope=all")
+      .then((result) => setOrders(result.orders || []))
+      .catch((error) => setAnalyticsMessage(error.message));
   }, []);
 
-  async function handleMonthChange(value) {
-    setSelectedMonth(value);
-    if (!value) {
-      setTopItemsByMonth([]);
-      return;
-    }
+  const analytics = useMemo(() => buildAnalytics(orders), [orders]);
 
-    try {
-      const result = await apiRequest(`/orders/top-items?month=${value}`);
-      setTopItemsByMonth(result.items || []);
-    } catch (error) {
-      setAnalyticsMessage(error.message);
-    }
-  }
-
-  async function handleDownloadRevenue() {
-    setDownloadMessage("");
-    try {
-      await apiDownload("/orders/export/revenue", "revenue-details.xlsx");
-    } catch (error) {
-      try {
-        const rows = (analytics.last7 || []).map((entry) => ({
-          Date: entry.day,
-          Orders: entry.orders,
-          Revenue: entry.revenue,
-        }));
-        downloadCsv("revenue-details.csv", rows);
-        setDownloadMessage("Excel route unavailable, downloaded CSV instead.");
-      } catch {
-        setDownloadMessage(error.message);
-      }
-    }
-  }
-
-  async function handleDownloadTopItems() {
-    setDownloadMessage("");
-    if (!selectedMonth) {
-      setDownloadMessage("Select month first");
-      return;
-    }
-    try {
-      await apiDownload(
-        `/orders/export/top-items?month=${selectedMonth}`,
-        `top-items-${selectedMonth}.xlsx`,
-      );
-    } catch (error) {
-      try {
-        const result = await apiRequest(
-          `/orders/top-items?month=${selectedMonth}`,
-        );
-        const rows = (result.items || []).map((item) => ({
-          Month: selectedMonth,
-          Item: item.name,
-          QuantitySold: item.quantity,
-          Revenue: item.revenue,
-        }));
-        downloadCsv(`top-items-${selectedMonth}.csv`, rows);
-        setDownloadMessage("Excel route unavailable, downloaded CSV instead.");
-      } catch {
-        setDownloadMessage(error.message);
-      }
-    }
-  }
-
-  const monthLabel = useMemo(
-    () => selectedMonth || analytics.currentMonth,
-    [selectedMonth, analytics.currentMonth],
+  const selectedMonthTopItems = useMemo(
+    () => getTopItemsForMonth(analytics.completedOrders, selectedMonth),
+    [analytics.completedOrders, selectedMonth],
   );
+
+  function handleDownloadRevenue() {
+    setDownloadMessage("");
+
+    if (analytics.last7.length === 0) {
+      setDownloadMessage("No revenue data available for download.");
+      return;
+    }
+
+    downloadWorkbook(
+      "revenue-details.xlsx",
+      "Revenue",
+      analytics.last7.map((entry) => ({
+        Date: entry.day,
+        Orders: entry.orders,
+        Revenue: entry.revenue,
+      })),
+    );
+    setDownloadMessage("Revenue Excel downloaded.");
+  }
+
+  function handleDownloadTopItems() {
+    setDownloadMessage("");
+
+    if (!selectedMonthTopItems.length) {
+      setDownloadMessage("No top item data available for the selected month.");
+      return;
+    }
+
+    downloadWorkbook(
+      `top-items-${selectedMonth}.xlsx`,
+      "TopItems",
+      selectedMonthTopItems.map((item) => ({
+        Month: selectedMonth,
+        Item: item.name,
+        QuantitySold: item.quantity,
+        Revenue: item.revenue,
+      })),
+    );
+    setDownloadMessage("Top items Excel downloaded.");
+  }
+
+  const monthLabel = selectedMonth || analytics.currentMonth;
 
   return (
     <>
@@ -189,7 +247,7 @@ export default function AdminAnalyticsPage() {
             <input
               type="month"
               value={selectedMonth}
-              onChange={(event) => handleMonthChange(event.target.value)}
+              onChange={(event) => setSelectedMonth(event.target.value)}
             />
           </label>
           <div className="download-actions">
@@ -217,7 +275,7 @@ export default function AdminAnalyticsPage() {
               </tr>
             </thead>
             <tbody>
-              {topItemsByMonth.map((item) => (
+              {selectedMonthTopItems.map((item) => (
                 <tr key={item.name}>
                   <td>{item.name}</td>
                   <td>{item.quantity}</td>

@@ -71,13 +71,25 @@ export default function AdminSalariesPage() {
     setLoading(true);
 
     try {
+      const selectedEmployeeForSalary = employees.find(
+        (employee) => String(employee._id) === String(salaryForm.employeeId),
+      );
+      const resolvedMonthlySalary =
+        String(salaryForm.monthlySalary).trim() === ""
+          ? Number(
+              selectedEmployeeForSalary?.monthlySalary ||
+                selectedEmployeeForSalary?.defaultMonthlySalary ||
+                0,
+            )
+          : Number(salaryForm.monthlySalary);
+
       await apiRequest("/salaries", {
         method: "POST",
         body: JSON.stringify({
           employeeId: salaryForm.employeeId,
           date: salaryForm.date,
           month: getMonthKey(salaryForm.date) || currentMonth,
-          monthlySalary: Number(salaryForm.monthlySalary),
+          monthlySalary: resolvedMonthlySalary,
           extraReceived: Number(salaryForm.extraReceived || 0),
         }),
       });
@@ -136,10 +148,14 @@ export default function AdminSalariesPage() {
         } catch (requestError) {
           createError = requestError;
 
+          const errorMessage = String(requestError.message || "").toLowerCase();
+
           // If a route is missing on one deployment shape, try the fallback endpoint.
           if (
             endpoint === "/salaries/employees" &&
-            requestError.message?.includes("Route not found")
+            (errorMessage.includes("route not found") ||
+              errorMessage.includes("required") ||
+              errorMessage.includes("amount and date"))
           ) {
             continue;
           }
@@ -313,6 +329,9 @@ export default function AdminSalariesPage() {
                 <strong>{employee.name}</strong>
                 <span>{formatINR(employee.monthlySalary)}</span>
                 <small>
+                  Extra this month: {formatINR(employee.extraReceived || 0)}
+                </small>
+                <small>
                   Outstanding advance: {formatINR(employee.outstandingAdvance)}
                 </small>
               </button>
@@ -403,8 +422,7 @@ export default function AdminSalariesPage() {
                     monthlySalary: event.target.value,
                   })
                 }
-                placeholder="30000"
-                required
+                placeholder="Leave empty to use employee default"
               />
             </label>
             <label>
@@ -423,6 +441,9 @@ export default function AdminSalariesPage() {
                 placeholder="0"
                 required
               />
+              <small className="muted">
+                Extra received means advance taken by employee.
+              </small>
             </label>
             <button type="submit" disabled={loading}>
               {loading ? "Saving..." : "Add salary"}

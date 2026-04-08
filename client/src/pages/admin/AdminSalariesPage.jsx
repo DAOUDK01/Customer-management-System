@@ -118,19 +118,55 @@ export default function AdminSalariesPage() {
         return;
       }
 
-      await apiRequest("/salaries", {
-        method: "POST",
-        body: JSON.stringify({
-          name: trimmedName,
-          defaultMonthlySalary: salary,
-        }),
-      });
+      const payload = {
+        name: trimmedName,
+        defaultMonthlySalary: salary,
+      };
+
+      let createError = null;
+
+      for (const endpoint of ["/salaries/employees", "/salaries"]) {
+        try {
+          await apiRequest(endpoint, {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
+          createError = null;
+          break;
+        } catch (requestError) {
+          createError = requestError;
+
+          // If a route is missing on one deployment shape, try the fallback endpoint.
+          if (
+            endpoint === "/salaries/employees" &&
+            requestError.message?.includes("Route not found")
+          ) {
+            continue;
+          }
+
+          break;
+        }
+      }
+
+      if (createError) {
+        throw createError;
+      }
 
       setMessage("Employee added successfully!");
       setEmployeeForm({ name: "", defaultMonthlySalary: "" });
       await loadSalaries();
     } catch (requestError) {
-      setMessage(requestError.message);
+      if (
+        requestError.message
+          ?.toLowerCase()
+          .includes("employeename, amount and date are required")
+      ) {
+        setMessage(
+          "Your server is still using old salary validation. Please restart/redeploy backend, then try again.",
+        );
+      } else {
+        setMessage(requestError.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -319,12 +355,26 @@ export default function AdminSalariesPage() {
             ) : null}
           </div>
 
-          {selectedEmployee ? (
-            <form
-              className="form-stack salary-inline-form"
-              onSubmit={handleCreateSalary}
-            >
-              <input type="hidden" value={salaryForm.employeeId} readOnly />
+          <form
+            className="form-stack salary-inline-form"
+            onSubmit={handleCreateSalary}
+          >
+            <label>
+              Employee
+              <select
+                value={salaryForm.employeeId}
+                onChange={(event) => handleEmployeeSelect(event.target.value)}
+                required
+                disabled={employees.length === 0}
+              >
+                <option value="">Select employee</option>
+                {employees.map((employee) => (
+                  <option key={employee._id} value={employee._id}>
+                    {employee.name}
+                  </option>
+                ))}
+              </select>
+            </label>
               <label>
                 Salary date
                 <input
@@ -377,8 +427,12 @@ export default function AdminSalariesPage() {
               <button type="submit" disabled={loading}>
                 {loading ? "Saving..." : "Add salary"}
               </button>
+              {employees.length === 0 ? (
+                <p className="muted">
+                  Add an employee first, then choose the employee and salary date.
+                </p>
+              ) : null}
             </form>
-          ) : null}
         </article>
 
         <article className="detail-card">

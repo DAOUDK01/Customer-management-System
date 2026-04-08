@@ -20,7 +20,12 @@ function verifyToken(req, res, next) {
 
 function requireRole(...allowedRoles) {
   return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    const normalizedAllowedRoles = allowedRoles.map((role) =>
+      String(role || "").toLowerCase(),
+    );
+    const userRole = String(req.user?.role || "").toLowerCase();
+
+    if (!req.user || !normalizedAllowedRoles.includes(userRole)) {
       return res.status(403).json({ message: "Forbidden" });
     }
 

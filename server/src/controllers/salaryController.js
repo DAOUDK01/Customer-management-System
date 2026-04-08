@@ -1,6 +1,10 @@
 const Employee = require("../models/Employee");
 const Salary = require("../models/Salary");
 
+function getRequesterId(req) {
+  return req.user?.id || req.user?._id || req.user?.userId || null;
+}
+
 function getMonthKey(value) {
   if (typeof value === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
     return value;
@@ -171,6 +175,7 @@ async function listEmployees(req, res, next) {
 async function createEmployee(req, res, next) {
   try {
     const { name, defaultMonthlySalary } = req.body;
+    const requesterId = getRequesterId(req);
 
     if (!name || Number.isNaN(Number(defaultMonthlySalary))) {
       return res
@@ -178,10 +183,16 @@ async function createEmployee(req, res, next) {
         .json({ message: "name and defaultMonthlySalary are required" });
     }
 
+    if (!requesterId) {
+      return res
+        .status(401)
+        .json({ message: "Invalid session. Please login again." });
+    }
+
     const employee = await Employee.create({
       name: String(name).trim(),
       defaultMonthlySalary: Number(defaultMonthlySalary),
-      createdBy: req.user.id,
+      createdBy: requesterId,
     });
 
     return res.status(201).json({ employee });
@@ -204,6 +215,7 @@ async function createSalary(req, res, next) {
       name,
       defaultMonthlySalary,
     } = req.body;
+    const requesterId = getRequesterId(req);
 
     const hasMonthlySalaryInput =
       monthlySalary !== undefined && String(monthlySalary).trim() !== "";
@@ -238,7 +250,7 @@ async function createSalary(req, res, next) {
         const employee = await Employee.create({
           name: String(name).trim(),
           defaultMonthlySalary: salary,
-          createdBy: req.user.id,
+          createdBy: requesterId,
         });
 
         console.log("Employee created:", employee._id);
@@ -371,7 +383,7 @@ async function createSalary(req, res, next) {
         deductionApplied,
         monthlyReceiving,
         outstandingAdvanceAfter,
-        createdBy: req.user.id,
+        createdBy: requesterId,
       });
     } catch (createError) {
       if (createError.code === 11000) {

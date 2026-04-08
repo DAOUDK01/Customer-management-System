@@ -241,12 +241,12 @@ async function createSalary(req, res, next) {
       month: monthKey,
     });
 
-    if (existingSalary) {
+    const saveOrUpdateSalary = async (salaryDoc) => {
       const updatedMonthlySalary = parsedMonthlySalary;
       const updatedExtraReceived =
-        Number(existingSalary.extraReceived || 0) + parsedExtraReceived;
-      const updatedExtraHistory = Array.isArray(existingSalary.extraHistory)
-        ? [...existingSalary.extraHistory]
+        Number(salaryDoc.extraReceived || 0) + parsedExtraReceived;
+      const updatedExtraHistory = Array.isArray(salaryDoc.extraHistory)
+        ? [...salaryDoc.extraHistory]
         : [];
 
       if (parsedExtraReceived > 0) {
@@ -267,18 +267,24 @@ async function createSalary(req, res, next) {
         outstandingBefore - deductionApplied + updatedExtraReceived,
       );
 
-      existingSalary.employeeName = employee.name;
-      existingSalary.recordDate = dateKey;
-      existingSalary.monthlySalary = updatedMonthlySalary;
-      existingSalary.extraReceived = updatedExtraReceived;
-      existingSalary.extraHistory = updatedExtraHistory;
-      existingSalary.deductionApplied = deductionApplied;
-      existingSalary.monthlyReceiving = monthlyReceiving;
-      existingSalary.outstandingAdvanceAfter = outstandingAdvanceAfter;
-      await existingSalary.save();
+      salaryDoc.employeeName = employee.name;
+      salaryDoc.recordDate = dateKey;
+      salaryDoc.monthlySalary = updatedMonthlySalary;
+      salaryDoc.extraReceived = updatedExtraReceived;
+      salaryDoc.extraHistory = updatedExtraHistory;
+      salaryDoc.deductionApplied = deductionApplied;
+      salaryDoc.monthlyReceiving = monthlyReceiving;
+      salaryDoc.outstandingAdvanceAfter = outstandingAdvanceAfter;
+      await salaryDoc.save();
+
+      return salaryDoc;
+    };
+
+    if (existingSalary) {
+      const updatedSalary = await saveOrUpdateSalary(existingSalary);
 
       return res.json({
-        salary: existingSalary,
+        salary: updatedSalary,
         message: "Salary for this month updated with extra amount",
       });
     }
@@ -294,22 +300,43 @@ async function createSalary(req, res, next) {
       outstandingBefore - deductionApplied + parsedExtraReceived,
     );
 
-    const salary = await Salary.create({
-      employeeId: employee._id,
-      employeeName: employee.name,
-      month: monthKey,
-      recordDate: dateKey,
-      monthlySalary: parsedMonthlySalary,
-      extraReceived: parsedExtraReceived,
-      extraHistory:
-        parsedExtraReceived > 0
-          ? [{ date: dateKey, amount: parsedExtraReceived }]
-          : [],
-      deductionApplied,
-      monthlyReceiving,
-      outstandingAdvanceAfter,
-      createdBy: req.user.id,
-    });
+    let salary;
+
+    try {
+      salary = await Salary.create({
+        employeeId: employee._id,
+        employeeName: employee.name,
+        month: monthKey,
+        recordDate: dateKey,
+        monthlySalary: parsedMonthlySalary,
+        extraReceived: parsedExtraReceived,
+        extraHistory:
+          parsedExtraReceived > 0
+            ? [{ date: dateKey, amount: parsedExtraReceived }]
+            : [],
+        deductionApplied,
+        monthlyReceiving,
+        outstandingAdvanceAfter,
+        createdBy: req.user.id,
+      });
+    } catch (createError) {
+      if (createError.code === 11000) {
+        const duplicateMonthSalary = await Salary.findOne({
+          employeeId: employee._id,
+          month: monthKey,
+        });
+
+        if (duplicateMonthSalary) {
+          const updatedSalary = await saveOrUpdateSalary(duplicateMonthSalary);
+          return res.json({
+            salary: updatedSalary,
+            message: "Salary for this month updated with extra amount",
+          });
+        }
+      }
+
+      throw createError;
+    }
 
     return res.status(201).json({ salary });
   } catch (error) {

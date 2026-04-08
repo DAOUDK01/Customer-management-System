@@ -66,7 +66,10 @@ async function getOutstandingAdvanceBefore(employeeId, month) {
 }
 
 async function recalculateEmployeeLedger(employeeId) {
-  const records = await Salary.find({ employeeId }).sort({ month: 1, createdAt: 1 });
+  const records = await Salary.find({ employeeId }).sort({
+    month: 1,
+    createdAt: 1,
+  });
 
   let outstanding = 0;
 

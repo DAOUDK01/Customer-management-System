@@ -92,7 +92,9 @@ function deriveExtraEntries(records) {
   const entries = [];
 
   (records || []).forEach((salary) => {
-    const history = Array.isArray(salary.extraHistory) ? salary.extraHistory : [];
+    const history = Array.isArray(salary.extraHistory)
+      ? salary.extraHistory
+      : [];
     history.forEach((entry) => {
       const amount = Number(entry?.amount || 0);
       if (amount <= 0) {

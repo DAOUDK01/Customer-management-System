@@ -66,7 +66,10 @@ async function getOutstandingAdvanceBefore(employeeId, month) {
 }
 
 function getExtraTotalFromHistory(record) {
-  if (!Array.isArray(record?.extraHistory) || record.extraHistory.length === 0) {
+  if (
+    !Array.isArray(record?.extraHistory) ||
+    record.extraHistory.length === 0
+  ) {
     return Number(record?.extraReceived || 0);
   }
 

@@ -302,32 +302,6 @@ export default function AdminSalariesPage() {
       }
 
       if (createError) {
-        try {
-          const legacyResult = await apiRequest("/salaries", {
-            method: "POST",
-            body: JSON.stringify({
-              employeeName: trimmedName,
-              amount: salary,
-              date: getCurrentDate(),
-            }),
-          });
-
-          createError = null;
-          createdEmployee = {
-            _id: `legacy-${trimmedName.toLowerCase()}`,
-            name: trimmedName,
-            defaultMonthlySalary: salary,
-            monthlySalary: salary,
-            extraReceived: 0,
-            outstandingAdvance: 0,
-            ...(legacyResult.employee || {}),
-          };
-        } catch (legacyError) {
-          createError = legacyError;
-        }
-      }
-
-      if (createError) {
         throw createError;
       }
 
@@ -377,13 +351,22 @@ export default function AdminSalariesPage() {
 
       await loadSalaries();
     } catch (requestError) {
+      const errorMessage = String(requestError.message || "");
+
       if (
+        errorMessage.includes("employeeId_1_month_1") ||
+        (errorMessage.includes("E11000") && errorMessage.includes("month"))
+      ) {
+        setMessage(
+          "Backend attempted to insert an invalid salary record while adding employee. Please restart/redeploy backend and try again.",
+        );
+      } else if (
         requestError.message
           ?.toLowerCase()
           .includes("employeename, amount and date are required")
       ) {
         setMessage(
-          "Your server is still using old salary validation. Please restart/redeploy backend, then try again.",
+          "Your server is using old salary validation for this endpoint. Please redeploy backend with latest salary controller.",
         );
       } else {
         setMessage(requestError.message);

@@ -113,6 +113,7 @@ async function createSalary(req, res, next) {
     const {
       employeeId,
       month,
+      date,
       monthlySalary,
       extraReceived = 0,
       name,
@@ -122,6 +123,7 @@ async function createSalary(req, res, next) {
     console.log("createSalary received:", {
       employeeId,
       month,
+      date,
       monthlySalary,
       name,
       defaultMonthlySalary,
@@ -159,23 +161,21 @@ async function createSalary(req, res, next) {
     }
 
     // Handle salary record creation
-    if (!employeeId || !month || monthlySalary === undefined) {
+    const monthKey = getMonthKey(month || date);
+
+    if (!employeeId || !monthKey || monthlySalary === undefined) {
       return res
         .status(400)
-        .json({ message: "employeeId, month, and monthlySalary are required" });
+        .json({
+          message:
+            "employeeId, monthlySalary, and either month or date are required",
+        });
     }
 
     if (Number.isNaN(Number(monthlySalary)) || Number(monthlySalary) < 0) {
       return res
         .status(400)
         .json({ message: "monthlySalary must be a valid positive number" });
-    }
-
-    const monthKey = getMonthKey(month);
-    if (!monthKey) {
-      return res
-        .status(400)
-        .json({ message: "month must be in YYYY-MM format" });
     }
 
     const employee = await Employee.findById(employeeId);

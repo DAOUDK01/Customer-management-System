@@ -7,6 +7,19 @@ function getCurrentMonth() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function getCurrentDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getMonthKey(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export default function AdminSalariesPage() {
   const currentMonth = getCurrentMonth();
   const [salaries, setSalaries] = useState([]);
@@ -20,7 +33,7 @@ export default function AdminSalariesPage() {
   });
   const [salaryForm, setSalaryForm] = useState({
     employeeId: "",
-    month: currentMonth,
+    date: getCurrentDate(),
     monthlySalary: "",
     extraReceived: "0",
   });
@@ -62,7 +75,8 @@ export default function AdminSalariesPage() {
         method: "POST",
         body: JSON.stringify({
           employeeId: salaryForm.employeeId,
-          month: salaryForm.month,
+          date: salaryForm.date,
+          month: getMonthKey(salaryForm.date) || currentMonth,
           monthlySalary: Number(salaryForm.monthlySalary),
           extraReceived: Number(salaryForm.extraReceived || 0),
         }),
@@ -71,7 +85,7 @@ export default function AdminSalariesPage() {
       setMessage("Monthly salary saved");
       setSalaryForm({
         employeeId: salaryForm.employeeId,
-        month: currentMonth,
+        date: getCurrentDate(),
         monthlySalary: "",
         extraReceived: "0",
       });
@@ -158,7 +172,7 @@ export default function AdminSalariesPage() {
       monthlySalary: employee
         ? String(employee.monthlySalary || employee.defaultMonthlySalary || 0)
         : current.monthlySalary,
-      month: current.month || currentMonth,
+        date: current.date || getCurrentDate(),
     }));
   }
 
@@ -312,15 +326,19 @@ export default function AdminSalariesPage() {
             >
               <input type="hidden" value={salaryForm.employeeId} readOnly />
               <label>
-                Month
+                Salary date
                 <input
-                  type="month"
-                  value={salaryForm.month}
+                  type="date"
+                  value={salaryForm.date}
                   onChange={(event) =>
-                    setSalaryForm({ ...salaryForm, month: event.target.value })
+                    setSalaryForm({ ...salaryForm, date: event.target.value })
                   }
                   required
                 />
+                <small className="muted">
+                  The app stores salary records by month, but you can pick the
+                  actual date here.
+                </small>
               </label>
               <label>
                 Monthly salary

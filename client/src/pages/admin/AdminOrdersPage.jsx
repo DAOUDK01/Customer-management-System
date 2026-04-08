@@ -118,7 +118,10 @@ export default function AdminOrdersPage() {
     const map = new Map();
 
     orders.forEach((order) => {
-      const key = summaryView === "day" ? getDayKey(order.createdAt) : getMonthKey(order.createdAt);
+      const key =
+        summaryView === "day"
+          ? getDayKey(order.createdAt)
+          : getMonthKey(order.createdAt);
       const current = map.get(key) || {
         period: key,
         completed: 0,

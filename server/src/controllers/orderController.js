@@ -141,7 +141,9 @@ async function deleteOldOrders(req, res, next) {
 
     if (from || to) {
       if (!from || !to) {
-        return res.status(400).json({ message: "Both from and to are required" });
+        return res
+          .status(400)
+          .json({ message: "Both from and to are required" });
       }
 
       const fromDate = new Date(`${from}T00:00:00.000Z`);

@@ -65,6 +65,17 @@ async function getOutstandingAdvanceBefore(employeeId, month) {
   return Math.max(0, outstanding);
 }
 
+function getExtraTotalFromHistory(record) {
+  if (!Array.isArray(record?.extraHistory) || record.extraHistory.length === 0) {
+    return Number(record?.extraReceived || 0);
+  }
+
+  return record.extraHistory.reduce(
+    (sum, entry) => sum + Number(entry?.amount || 0),
+    0,
+  );
+}
+
 async function recalculateEmployeeLedger(employeeId) {
   const records = await Salary.find({ employeeId }).sort({
     month: 1,
@@ -75,7 +86,7 @@ async function recalculateEmployeeLedger(employeeId) {
 
   for (const record of records) {
     const monthlySalary = Number(record.monthlySalary || 0);
-    const extraReceived = Number(record.extraReceived || 0);
+    const extraReceived = getExtraTotalFromHistory(record);
 
     const deductionApplied = Math.min(Math.max(outstanding, 0), monthlySalary);
     const monthlyReceiving = monthlySalary - deductionApplied + extraReceived;
@@ -87,6 +98,7 @@ async function recalculateEmployeeLedger(employeeId) {
     record.deductionApplied = deductionApplied;
     record.monthlyReceiving = monthlyReceiving;
     record.outstandingAdvanceAfter = outstandingAdvanceAfter;
+    record.extraReceived = extraReceived;
 
     outstanding = outstandingAdvanceAfter;
     await record.save();
@@ -95,6 +107,11 @@ async function recalculateEmployeeLedger(employeeId) {
 
 async function listSalaries(req, res, next) {
   try {
+    const employeeIds = await Salary.distinct("employeeId");
+    for (const employeeId of employeeIds) {
+      await recalculateEmployeeLedger(employeeId);
+    }
+
     const salaries = await Salary.find()
       .sort({ month: -1, createdAt: -1 })
       .lean();

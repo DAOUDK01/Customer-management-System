@@ -88,6 +88,41 @@ function deriveSalaryLedger(records) {
   });
 }
 
+function deriveExtraEntries(records) {
+  const entries = [];
+
+  (records || []).forEach((salary) => {
+    const history = Array.isArray(salary.extraHistory) ? salary.extraHistory : [];
+    history.forEach((entry) => {
+      const amount = Number(entry?.amount || 0);
+      if (amount <= 0) {
+        return;
+      }
+
+      const atDate = entry?.at ? new Date(entry.at) : null;
+      entries.push({
+        key: `${salary._id}-${entry?._id || `${entry?.date || "date"}-${amount}`}`,
+        month: salary.month,
+        date: entry?.date || salary.recordDate || "-",
+        time:
+          atDate && !Number.isNaN(atDate.getTime())
+            ? atDate.toLocaleTimeString()
+            : "-",
+        amount,
+      });
+    });
+  });
+
+  return entries.sort((a, b) => {
+    const dateDiff = String(b.date).localeCompare(String(a.date));
+    if (dateDiff !== 0) {
+      return dateDiff;
+    }
+
+    return String(b.time).localeCompare(String(a.time));
+  });
+}
+
 function getEmployeeKey(employee) {
   if (employee?._id) {
     return String(employee._id);
@@ -661,6 +696,11 @@ export default function AdminSalariesPage() {
     [selectedEmployeeSalaries],
   );
 
+  const selectedEmployeeExtraEntries = useMemo(
+    () => deriveExtraEntries(selectedEmployeeSalaries),
+    [selectedEmployeeSalaries],
+  );
+
   useEffect(() => {
     if (!selectedEmployee) {
       return;
@@ -923,6 +963,38 @@ export default function AdminSalariesPage() {
                     <td colSpan="7">
                       No salary records for this employee yet.
                     </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article className="detail-card">
+          <h3>Extra Entries</h3>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedEmployeeExtraEntries.length > 0 ? (
+                  selectedEmployeeExtraEntries.map((entry) => (
+                    <tr key={entry.key}>
+                      <td>{entry.month}</td>
+                      <td>{entry.date}</td>
+                      <td>{entry.time}</td>
+                      <td>{formatINR(entry.amount)}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4">No extra entries yet.</td>
                   </tr>
                 )}
               </tbody>

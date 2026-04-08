@@ -341,16 +341,20 @@ export default function AdminSalariesPage() {
         message.includes("salary already added") ||
         (message.includes("e11000") && message.includes("month"))
       ) {
+        const payload = {
+          employeeId: selectedEmployeeRecordId,
+          date: salaryForm.date,
+          month: getMonthKey(salaryForm.date) || currentMonth,
+          monthlySalary: resolvedMonthlySalary,
+          extraReceived: Number(salaryForm.extraReceived || 0),
+        };
+
         try {
           const fallbackResult = await apiRequest(
             `/salaries/${encodeURIComponent(selectedEmployeeRecordId)}/${encodeURIComponent(getMonthKey(salaryForm.date) || currentMonth)}`,
             {
               method: "PATCH",
-              body: JSON.stringify({
-                date: salaryForm.date,
-                monthlySalary: resolvedMonthlySalary,
-                extraReceived: Number(salaryForm.extraReceived || 0),
-              }),
+              body: JSON.stringify(payload),
             },
           );
 
@@ -369,7 +373,52 @@ export default function AdminSalariesPage() {
           }));
           await loadSalaries();
         } catch (fallbackError) {
-          setMessage(fallbackError.message);
+          const fallbackMessage = String(
+            fallbackError?.message || "",
+          ).toLowerCase();
+
+          // Compatibility fallback for servers that do not yet expose PATCH route.
+          if (fallbackMessage.includes("route not found")) {
+            try {
+              const legacyRetryResult = await apiRequest("/salaries", {
+                method: "POST",
+                body: JSON.stringify(payload),
+              });
+
+              if (legacyRetryResult?.salary) {
+                setSalaries((current) =>
+                  upsertSalaryRecord(current, legacyRetryResult.salary),
+                );
+              }
+
+              setMessage("Salary month updated with extra amount");
+              setSalaryForm((current) => ({
+                ...current,
+                date: getCurrentDate(),
+                monthlySalary: "",
+                extraReceived: "0",
+              }));
+              await loadSalaries();
+            } catch (legacyRetryError) {
+              const legacyRetryMessage = String(
+                legacyRetryError?.message || "",
+              );
+
+              if (
+                legacyRetryMessage
+                  .toLowerCase()
+                  .includes("salary already added")
+              ) {
+                setMessage(
+                  "Backend is running an old salary API. Please restart/redeploy backend to enable extra update for existing month.",
+                );
+              } else {
+                setMessage(legacyRetryMessage);
+              }
+            }
+          } else {
+            setMessage(fallbackError.message);
+          }
         }
       } else {
         setMessage(requestError.message);

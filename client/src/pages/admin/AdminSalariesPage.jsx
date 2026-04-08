@@ -45,7 +45,9 @@ function getMonthKey(value) {
 
 function deriveSalaryLedger(records) {
   const normalized = [...(records || [])].sort((a, b) => {
-    const monthDiff = String(a.month || "").localeCompare(String(b.month || ""));
+    const monthDiff = String(a.month || "").localeCompare(
+      String(b.month || ""),
+    );
     if (monthDiff !== 0) {
       return monthDiff;
     }
@@ -75,7 +77,9 @@ function deriveSalaryLedger(records) {
   });
 
   return computedAsc.sort((a, b) => {
-    const monthDiff = String(b.month || "").localeCompare(String(a.month || ""));
+    const monthDiff = String(b.month || "").localeCompare(
+      String(a.month || ""),
+    );
     if (monthDiff !== 0) {
       return monthDiff;
     }

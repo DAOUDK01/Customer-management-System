@@ -375,64 +375,64 @@ export default function AdminSalariesPage() {
                 ))}
               </select>
             </label>
-              <label>
-                Salary date
-                <input
-                  type="date"
-                  value={salaryForm.date}
-                  onChange={(event) =>
-                    setSalaryForm({ ...salaryForm, date: event.target.value })
-                  }
-                  required
-                />
-                <small className="muted">
-                  The app stores salary records by month, but you can pick the
-                  actual date here.
-                </small>
-              </label>
-              <label>
-                Monthly salary
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={salaryForm.monthlySalary}
-                  onChange={(event) =>
-                    setSalaryForm({
-                      ...salaryForm,
-                      monthlySalary: event.target.value,
-                    })
-                  }
-                  placeholder="30000"
-                  required
-                />
-              </label>
-              <label>
-                Extra received
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={salaryForm.extraReceived}
-                  onChange={(event) =>
-                    setSalaryForm({
-                      ...salaryForm,
-                      extraReceived: event.target.value,
-                    })
-                  }
-                  placeholder="0"
-                  required
-                />
-              </label>
-              <button type="submit" disabled={loading}>
-                {loading ? "Saving..." : "Add salary"}
-              </button>
-              {employees.length === 0 ? (
-                <p className="muted">
-                  Add an employee first, then choose the employee and salary date.
-                </p>
-              ) : null}
-            </form>
+            <label>
+              Salary date
+              <input
+                type="date"
+                value={salaryForm.date}
+                onChange={(event) =>
+                  setSalaryForm({ ...salaryForm, date: event.target.value })
+                }
+                required
+              />
+              <small className="muted">
+                The app stores salary records by month, but you can pick the
+                actual date here.
+              </small>
+            </label>
+            <label>
+              Monthly salary
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={salaryForm.monthlySalary}
+                onChange={(event) =>
+                  setSalaryForm({
+                    ...salaryForm,
+                    monthlySalary: event.target.value,
+                  })
+                }
+                placeholder="30000"
+                required
+              />
+            </label>
+            <label>
+              Extra received
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={salaryForm.extraReceived}
+                onChange={(event) =>
+                  setSalaryForm({
+                    ...salaryForm,
+                    extraReceived: event.target.value,
+                  })
+                }
+                placeholder="0"
+                required
+              />
+            </label>
+            <button type="submit" disabled={loading}>
+              {loading ? "Saving..." : "Add salary"}
+            </button>
+            {employees.length === 0 ? (
+              <p className="muted">
+                Add an employee first, then choose the employee and salary date.
+              </p>
+            ) : null}
+          </form>
         </article>
 
         <article className="detail-card">

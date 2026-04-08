@@ -43,45 +43,45 @@ function getMonthKey(value) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatExtraHistory(history) {
-  if (!Array.isArray(history) || history.length === 0) {
-    return "-";
-  }
+function deriveSalaryLedger(records) {
+  const normalized = [...(records || [])].sort((a, b) => {
+    const monthDiff = String(a.month || "").localeCompare(String(b.month || ""));
+    if (monthDiff !== 0) {
+      return monthDiff;
+    }
 
-  const normalized = history
-    .map((entry) => ({
-      date: String(entry?.date || "").trim(),
-      at: entry?.at ? new Date(entry.at) : null,
-      amount: Number(entry?.amount || 0),
-    }))
-    .filter((entry) => entry.date && entry.amount > 0)
-    .sort((a, b) => {
-      const atA = entryTime(entryOrNull(a.at));
-      const atB = entryTime(entryOrNull(b.at));
-      if (atA && atB) {
-        return atA - atB;
-      }
-      return a.date.localeCompare(b.date);
-    });
+    return String(a.recordDate || "").localeCompare(String(b.recordDate || ""));
+  });
 
-  if (normalized.length === 0) {
-    return "-";
-  }
+  let outstanding = 0;
+  const computedAsc = normalized.map((record) => {
+    const monthlySalary = Number(record.monthlySalary || 0);
+    const extraReceived = Number(record.extraReceived || 0);
+    const deductionApplied = Math.min(Math.max(outstanding, 0), monthlySalary);
+    const monthlyReceiving = monthlySalary - deductionApplied + extraReceived;
+    const outstandingAdvanceAfter = Math.max(
+      0,
+      outstanding - deductionApplied + extraReceived,
+    );
 
-  return normalized
-    .map((entry) => {
-      const hasTime = entry.at && !Number.isNaN(entry.at.getTime());
-      return `${entry.date}${hasTime ? ` ${entry.at.toLocaleTimeString()}` : ""}: ${formatINR(entry.amount)}`;
-    })
-    .join(" | ");
-}
+    outstanding = outstandingAdvanceAfter;
 
-function entryOrNull(value) {
-  return value instanceof Date ? value : null;
-}
+    return {
+      ...record,
+      deductionApplied,
+      monthlyReceiving,
+      outstandingAdvanceAfter,
+    };
+  });
 
-function entryTime(value) {
-  return value && !Number.isNaN(value.getTime()) ? value.getTime() : 0;
+  return computedAsc.sort((a, b) => {
+    const monthDiff = String(b.month || "").localeCompare(String(a.month || ""));
+    if (monthDiff !== 0) {
+      return monthDiff;
+    }
+
+    return String(b.recordDate || "").localeCompare(String(a.recordDate || ""));
+  });
 }
 
 function getEmployeeKey(employee) {
@@ -652,6 +652,11 @@ export default function AdminSalariesPage() {
     [salaries, selectedEmployeeRecordId, selectedEmployee],
   );
 
+  const computedSelectedEmployeeSalaries = useMemo(
+    () => deriveSalaryLedger(selectedEmployeeSalaries),
+    [selectedEmployeeSalaries],
+  );
+
   useEffect(() => {
     if (!selectedEmployee) {
       return;
@@ -892,28 +897,26 @@ export default function AdminSalariesPage() {
                   <th>Monthly Salary</th>
                   <th>Receiving</th>
                   <th>Extra</th>
-                  <th>Extra Details</th>
                   <th>Deduction</th>
                   <th>Advance Left</th>
                 </tr>
               </thead>
               <tbody>
-                {selectedEmployeeSalaries.length > 0 ? (
-                  selectedEmployeeSalaries.map((salary) => (
+                {computedSelectedEmployeeSalaries.length > 0 ? (
+                  computedSelectedEmployeeSalaries.map((salary) => (
                     <tr key={salary._id}>
                       <td>{salary.recordDate || "-"}</td>
                       <td>{salary.month}</td>
                       <td>{formatINR(salary.monthlySalary)}</td>
                       <td>{formatINR(salary.monthlyReceiving)}</td>
                       <td>{formatINR(salary.extraReceived)}</td>
-                      <td>{formatExtraHistory(salary.extraHistory)}</td>
                       <td>{formatINR(salary.deductionApplied)}</td>
                       <td>{formatINR(salary.outstandingAdvanceAfter)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="8">
+                    <td colSpan="7">
                       No salary records for this employee yet.
                     </td>
                   </tr>

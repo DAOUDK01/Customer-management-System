@@ -529,10 +529,14 @@ export default function AdminSalariesPage() {
       });
 
       setEmployees((current) =>
-        current.filter((employee) => getEmployeeRecordId(employee) !== employeeId),
+        current.filter(
+          (employee) => getEmployeeRecordId(employee) !== employeeId,
+        ),
       );
       setSalaries((current) =>
-        current.filter((salary) => String(salary.employeeId) !== String(employeeId)),
+        current.filter(
+          (salary) => String(salary.employeeId) !== String(employeeId),
+        ),
       );
 
       setSelectedEmployeeId((current) => {

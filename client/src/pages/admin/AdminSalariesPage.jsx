@@ -39,9 +39,35 @@ export default function AdminSalariesPage() {
   });
 
   async function loadSalaries() {
-    const result = await apiRequest("/salaries");
-    const loadedSalaries = result.salaries || [];
-    const loadedEmployees = result.employees || [];
+    const [salaryResponse, employeesResponse] = await Promise.allSettled([
+      apiRequest("/salaries"),
+      apiRequest("/salaries/employees"),
+    ]);
+
+    if (
+      salaryResponse.status === "rejected" &&
+      employeesResponse.status === "rejected"
+    ) {
+      throw new Error(salaryResponse.reason?.message || "Failed to load salaries");
+    }
+
+    const loadedSalaries =
+      salaryResponse.status === "fulfilled"
+        ? salaryResponse.value.salaries || []
+        : [];
+    const employeesFromSalaryEndpoint =
+      salaryResponse.status === "fulfilled"
+        ? salaryResponse.value.employees || []
+        : [];
+    const employeesFromEmployeeEndpoint =
+      employeesResponse.status === "fulfilled"
+        ? employeesResponse.value.employees || []
+        : [];
+
+    const loadedEmployees =
+      employeesFromEmployeeEndpoint.length > 0
+        ? employeesFromEmployeeEndpoint
+        : employeesFromSalaryEndpoint;
 
     setSalaries(loadedSalaries);
     setEmployees(loadedEmployees);
@@ -136,13 +162,15 @@ export default function AdminSalariesPage() {
       };
 
       let createError = null;
+      let createdEmployee = null;
 
       for (const endpoint of ["/salaries/employees", "/salaries"]) {
         try {
-          await apiRequest(endpoint, {
+          const result = await apiRequest(endpoint, {
             method: "POST",
             body: JSON.stringify(payload),
           });
+          createdEmployee = result.employee || null;
           createError = null;
           break;
         } catch (requestError) {
@@ -170,6 +198,31 @@ export default function AdminSalariesPage() {
 
       setMessage("Employee added successfully!");
       setEmployeeForm({ name: "", defaultMonthlySalary: "" });
+
+      if (createdEmployee?._id) {
+        setEmployees((current) => {
+          const exists = current.some(
+            (employee) => String(employee._id) === String(createdEmployee._id),
+          );
+
+          if (exists) {
+            return current;
+          }
+
+          const next = [...current, createdEmployee];
+          next.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+          return next;
+        });
+        setSelectedEmployeeId(String(createdEmployee._id));
+        setSalaryForm((current) => ({
+          ...current,
+          employeeId: String(createdEmployee._id),
+          monthlySalary: String(
+            createdEmployee.defaultMonthlySalary || createdEmployee.monthlySalary || 0,
+          ),
+        }));
+      }
+
       await loadSalaries();
     } catch (requestError) {
       if (

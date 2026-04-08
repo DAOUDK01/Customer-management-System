@@ -73,6 +73,7 @@ export default function App() {
         <Route path="quick-order" element={<QuickOrderPage />} />
         <Route path="menu" element={<MenuItemsPage />} />
         <Route path="orders" element={<ManageOrdersPage />} />
+        <Route path="salaries" element={<AdminSalariesPage />} />
         <Route
           path="*"
           element={<Navigate to="/manager/dashboard" replace />}

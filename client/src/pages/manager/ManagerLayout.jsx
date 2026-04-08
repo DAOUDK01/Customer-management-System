@@ -47,6 +47,14 @@ export default function ManagerLayout() {
         >
           Manage Orders
         </NavLink>
+        <NavLink
+          to="/manager/salaries"
+          className={({ isActive }) =>
+            isActive ? "manager-nav-link active" : "manager-nav-link"
+          }
+        >
+          Salaries
+        </NavLink>
       </nav>
 
       <Outlet />

@@ -13,11 +13,15 @@ const router = express.Router();
 
 router.use(verifyToken);
 
-router.get("/", requireRole("admin"), listSalaries);
-router.get("/employees", requireRole("admin"), listEmployees);
-router.post("/employees", requireRole("admin"), createEmployee);
-router.post("/", requireRole("admin"), createSalary);
-router.patch("/:employeeId/:month", requireRole("admin"), updateSalaryForMonth);
-router.delete("/:employeeId", requireRole("admin"), deleteEmployee);
+router.get("/", requireRole("admin", "manager"), listSalaries);
+router.get("/employees", requireRole("admin", "manager"), listEmployees);
+router.post("/employees", requireRole("admin", "manager"), createEmployee);
+router.post("/", requireRole("admin", "manager"), createSalary);
+router.patch(
+  "/:employeeId/:month",
+  requireRole("admin", "manager"),
+  updateSalaryForMonth,
+);
+router.delete("/:employeeId", requireRole("admin", "manager"), deleteEmployee);
 
 module.exports = router;

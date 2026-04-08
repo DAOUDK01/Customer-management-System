@@ -261,9 +261,7 @@ export default function AdminSalariesPage() {
       try {
         await loadSalaries();
       } catch (refreshError) {
-        setMessage(
-          `Salary saved, but refresh failed: ${refreshError.message}`,
-        );
+        setMessage(`Salary saved, but refresh failed: ${refreshError.message}`);
       }
     } catch (requestError) {
       setMessage(requestError.message);
@@ -465,8 +463,12 @@ export default function AdminSalariesPage() {
         (salary) =>
           (selectedEmployeeRecordId &&
             String(salary.employeeId) === String(selectedEmployeeRecordId)) ||
-          String(salary.employeeName || "").trim().toLowerCase() ===
-            String(selectedEmployee?.name || "").trim().toLowerCase(),
+          String(salary.employeeName || "")
+            .trim()
+            .toLowerCase() ===
+            String(selectedEmployee?.name || "")
+              .trim()
+              .toLowerCase(),
       ),
     [salaries, selectedEmployeeRecordId, selectedEmployee],
   );
@@ -573,7 +575,9 @@ export default function AdminSalariesPage() {
               <button
                 type="button"
                 className="delete-btn-small"
-                onClick={() => handleDeleteEmployee(getEmployeeRecordId(employee))}
+                onClick={() =>
+                  handleDeleteEmployee(getEmployeeRecordId(employee))
+                }
                 title="Delete employee"
                 disabled={loading || !getEmployeeRecordId(employee)}
               >

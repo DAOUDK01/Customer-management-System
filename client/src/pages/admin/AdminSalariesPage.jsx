@@ -509,43 +509,11 @@ export default function AdminSalariesPage() {
         defaultMonthlySalary: salary,
       };
 
-      let createError = null;
-      let createdEmployee = null;
-
-      for (const endpoint of ["/salaries/employees", "/salaries"]) {
-        try {
-          const result = await apiRequest(endpoint, {
-            method: "POST",
-            body: JSON.stringify(payload),
-          });
-          createdEmployee = result.employee || null;
-          createError = null;
-          break;
-        } catch (requestError) {
-          createError = requestError;
-
-          const errorMessage = String(requestError.message || "").toLowerCase();
-
-          // If a route is missing on one deployment shape, try the fallback endpoint.
-          if (
-            endpoint === "/salaries/employees" &&
-            (errorMessage.includes("route not found") ||
-              errorMessage.includes("forbidden") ||
-              errorMessage.includes("unauthorized") ||
-              errorMessage.includes("not allowed") ||
-              errorMessage.includes("required") ||
-              errorMessage.includes("amount and date"))
-          ) {
-            continue;
-          }
-
-          break;
-        }
-      }
-
-      if (createError) {
-        throw createError;
-      }
+      const result = await apiRequest("/salaries/employees", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      let createdEmployee = result.employee || null;
 
       if (!createdEmployee) {
         createdEmployee = {
@@ -603,12 +571,10 @@ export default function AdminSalariesPage() {
           "Backend attempted to insert an invalid salary record while adding employee. Please restart/redeploy backend and try again.",
         );
       } else if (
-        requestError.message
-          ?.toLowerCase()
-          .includes("employeename, amount and date are required")
+        requestError.message?.toLowerCase().includes("route not found")
       ) {
         setMessage(
-          "Your server is using old salary validation for this endpoint. Please redeploy backend with latest salary controller.",
+          "Employee endpoint is missing on the running backend. Please restart/redeploy backend with latest salary routes.",
         );
       } else if (
         requestError.message?.toLowerCase().includes("forbidden") ||

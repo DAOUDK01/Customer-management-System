@@ -46,7 +46,9 @@ function buildEmployeesFromSalaries(salaryRecords) {
       map.set(key, {
         _id: key,
         name,
-        defaultMonthlySalary: Number(record.monthlySalary || record.amount || 0),
+        defaultMonthlySalary: Number(
+          record.monthlySalary || record.amount || 0,
+        ),
         monthlySalary: Number(record.monthlySalary || record.amount || 0),
         extraReceived: Number(record.extraReceived || 0),
         outstandingAdvance: Number(record.outstandingAdvanceAfter || 0),
@@ -55,9 +57,15 @@ function buildEmployeesFromSalaries(salaryRecords) {
     }
 
     const existing = map.get(key);
-    existing.monthlySalary = Number(record.monthlySalary || record.amount || existing.monthlySalary || 0);
-    existing.extraReceived = Number(record.extraReceived || existing.extraReceived || 0);
-    existing.outstandingAdvance = Number(record.outstandingAdvanceAfter || existing.outstandingAdvance || 0);
+    existing.monthlySalary = Number(
+      record.monthlySalary || record.amount || existing.monthlySalary || 0,
+    );
+    existing.extraReceived = Number(
+      record.extraReceived || existing.extraReceived || 0,
+    );
+    existing.outstandingAdvance = Number(
+      record.outstandingAdvanceAfter || existing.outstandingAdvance || 0,
+    );
   });
 
   return Array.from(map.values()).sort((a, b) =>
@@ -163,7 +171,8 @@ export default function AdminSalariesPage() {
 
     try {
       const selectedEmployeeForSalary = employees.find(
-        (employee) => getEmployeeKey(employee) === String(salaryForm.employeeId),
+        (employee) =>
+          getEmployeeKey(employee) === String(salaryForm.employeeId),
       );
       const resolvedMonthlySalary =
         String(salaryForm.monthlySalary).trim() === ""
@@ -543,7 +552,10 @@ export default function AdminSalariesPage() {
               >
                 <option value="">Select employee</option>
                 {employees.map((employee) => (
-                  <option key={getEmployeeKey(employee)} value={getEmployeeKey(employee)}>
+                  <option
+                    key={getEmployeeKey(employee)}
+                    value={getEmployeeKey(employee)}
+                  >
                     {employee.name}
                   </option>
                 ))}

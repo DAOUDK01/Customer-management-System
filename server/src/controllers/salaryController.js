@@ -65,6 +65,31 @@ async function getOutstandingAdvanceBefore(employeeId, month) {
   return Math.max(0, outstanding);
 }
 
+async function recalculateEmployeeLedger(employeeId) {
+  const records = await Salary.find({ employeeId }).sort({ month: 1, createdAt: 1 });
+
+  let outstanding = 0;
+
+  for (const record of records) {
+    const monthlySalary = Number(record.monthlySalary || 0);
+    const extraReceived = Number(record.extraReceived || 0);
+
+    const deductionApplied = Math.min(Math.max(outstanding, 0), monthlySalary);
+    const monthlyReceiving = monthlySalary - deductionApplied + extraReceived;
+    const outstandingAdvanceAfter = Math.max(
+      0,
+      outstanding - deductionApplied + extraReceived,
+    );
+
+    record.deductionApplied = deductionApplied;
+    record.monthlyReceiving = monthlyReceiving;
+    record.outstandingAdvanceAfter = outstandingAdvanceAfter;
+
+    outstanding = outstandingAdvanceAfter;
+    await record.save();
+  }
+}
+
 async function listSalaries(req, res, next) {
   try {
     const salaries = await Salary.find()
@@ -282,7 +307,12 @@ async function createSalary(req, res, next) {
     };
 
     if (existingSalary) {
-      const updatedSalary = await saveOrUpdateSalary(existingSalary);
+      await saveOrUpdateSalary(existingSalary);
+      await recalculateEmployeeLedger(employee._id);
+      const updatedSalary = await Salary.findOne({
+        employeeId: employee._id,
+        month: monthKey,
+      });
 
       return res.json({
         salary: updatedSalary,
@@ -328,7 +358,12 @@ async function createSalary(req, res, next) {
         });
 
         if (duplicateMonthSalary) {
-          const updatedSalary = await saveOrUpdateSalary(duplicateMonthSalary);
+          await saveOrUpdateSalary(duplicateMonthSalary);
+          await recalculateEmployeeLedger(employee._id);
+          const updatedSalary = await Salary.findOne({
+            employeeId: employee._id,
+            month: monthKey,
+          });
           return res.json({
             salary: updatedSalary,
             message: "Salary for this month updated with extra amount",
@@ -339,7 +374,13 @@ async function createSalary(req, res, next) {
       throw createError;
     }
 
-    return res.status(201).json({ salary });
+    await recalculateEmployeeLedger(employee._id);
+    const recalculatedSalary = await Salary.findOne({
+      employeeId: employee._id,
+      month: monthKey,
+    });
+
+    return res.status(201).json({ salary: recalculatedSalary || salary });
   } catch (error) {
     console.error("createSalary error:", error.message);
     if (error.code === 11000) {
@@ -447,8 +488,14 @@ async function updateSalaryForMonth(req, res, next) {
     salary.outstandingAdvanceAfter = outstandingAdvanceAfter;
     await salary.save();
 
+    await recalculateEmployeeLedger(employee._id);
+    const recalculatedSalary = await Salary.findOne({
+      employeeId: employee._id,
+      month: monthKey,
+    });
+
     return res.json({
-      salary,
+      salary: recalculatedSalary || salary,
       message: "Salary for this month updated with extra amount",
     });
   } catch (error) {

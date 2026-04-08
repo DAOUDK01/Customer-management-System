@@ -48,7 +48,9 @@ export default function AdminSalariesPage() {
       salaryResponse.status === "rejected" &&
       employeesResponse.status === "rejected"
     ) {
-      throw new Error(salaryResponse.reason?.message || "Failed to load salaries");
+      throw new Error(
+        salaryResponse.reason?.message || "Failed to load salaries",
+      );
     }
 
     const loadedSalaries =
@@ -210,7 +212,9 @@ export default function AdminSalariesPage() {
           }
 
           const next = [...current, createdEmployee];
-          next.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+          next.sort((a, b) =>
+            String(a.name || "").localeCompare(String(b.name || "")),
+          );
           return next;
         });
         setSelectedEmployeeId(String(createdEmployee._id));
@@ -218,7 +222,9 @@ export default function AdminSalariesPage() {
           ...current,
           employeeId: String(createdEmployee._id),
           monthlySalary: String(
-            createdEmployee.defaultMonthlySalary || createdEmployee.monthlySalary || 0,
+            createdEmployee.defaultMonthlySalary ||
+              createdEmployee.monthlySalary ||
+              0,
           ),
         }));
       }

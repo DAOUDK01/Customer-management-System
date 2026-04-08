@@ -73,6 +73,35 @@ function buildEmployeesFromSalaries(salaryRecords) {
   );
 }
 
+function mergeEmployees(...employeeLists) {
+  const map = new Map();
+
+  employeeLists
+    .flat()
+    .filter(Boolean)
+    .forEach((employee) => {
+      const key = getEmployeeKey(employee);
+      const existing = map.get(key) || {};
+
+      map.set(key, {
+        ...existing,
+        ...employee,
+        _id: employee._id || existing._id || key,
+        name: employee.name || existing.name || "",
+        defaultMonthlySalary:
+          employee.defaultMonthlySalary ?? existing.defaultMonthlySalary ?? 0,
+        monthlySalary: employee.monthlySalary ?? existing.monthlySalary ?? 0,
+        extraReceived: employee.extraReceived ?? existing.extraReceived ?? 0,
+        outstandingAdvance:
+          employee.outstandingAdvance ?? existing.outstandingAdvance ?? 0,
+      });
+    });
+
+  return Array.from(map.values()).sort((a, b) =>
+    String(a.name || "").localeCompare(String(b.name || "")),
+  );
+}
+
 function pickArray(payload, preferredKey) {
   if (Array.isArray(payload)) {
     return payload;
@@ -135,15 +164,15 @@ export default function AdminSalariesPage() {
         ? pickArray(employeesResponse.value, "employees")
         : [];
 
-    const loadedEmployees =
-      employeesFromEmployeeEndpoint.length > 0
-        ? employeesFromEmployeeEndpoint
-        : employeesFromSalaryEndpoint.length > 0
-          ? employeesFromSalaryEndpoint
-          : buildEmployeesFromSalaries(loadedSalaries);
+    const salaryDerivedEmployees = buildEmployeesFromSalaries(loadedSalaries);
+    const loadedEmployees = mergeEmployees(
+      employeesFromEmployeeEndpoint,
+      employeesFromSalaryEndpoint,
+      salaryDerivedEmployees,
+    );
 
     setSalaries(loadedSalaries);
-    setEmployees(loadedEmployees);
+    setEmployees((current) => mergeEmployees(current, loadedEmployees));
 
     if (!selectedEmployeeId && loadedEmployees.length > 0) {
       const firstEmployeeId = getEmployeeKey(loadedEmployees[0]);
@@ -296,10 +325,21 @@ export default function AdminSalariesPage() {
         throw createError;
       }
 
+      if (!createdEmployee) {
+        createdEmployee = {
+          _id: `local-${trimmedName.toLowerCase().replace(/\s+/g, "-")}`,
+          name: trimmedName,
+          defaultMonthlySalary: salary,
+          monthlySalary: salary,
+          extraReceived: 0,
+          outstandingAdvance: 0,
+        };
+      }
+
       setMessage("Employee added successfully!");
       setEmployeeForm({ name: "", defaultMonthlySalary: "" });
 
-      if (createdEmployee?._id) {
+      if (createdEmployee) {
         setEmployees((current) => {
           const exists = current.some(
             (employee) =>

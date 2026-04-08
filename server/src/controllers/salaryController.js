@@ -84,7 +84,11 @@ function getExtraTotalFromHistory(record) {
 }
 
 async function recalculateEmployeeLedger(employeeId) {
-  const records = await Salary.find({ employeeId }).sort({
+  const records = await Salary.find({
+    employeeId,
+    month: { $exists: true, $ne: null },
+    monthlySalary: { $exists: true, $ne: null },
+  }).sort({
     month: 1,
     createdAt: 1,
   });
@@ -92,8 +96,16 @@ async function recalculateEmployeeLedger(employeeId) {
   let outstanding = 0;
 
   for (const record of records) {
+    if (!record.employeeId || !record.month) {
+      continue;
+    }
+
     const monthlySalary = Number(record.monthlySalary || 0);
     const extraReceived = getExtraTotalFromHistory(record);
+
+    if (Number.isNaN(monthlySalary) || monthlySalary < 0) {
+      continue;
+    }
 
     const deductionApplied = Math.min(Math.max(outstanding, 0), monthlySalary);
     const monthlyReceiving = monthlySalary - deductionApplied + extraReceived;
@@ -107,14 +119,31 @@ async function recalculateEmployeeLedger(employeeId) {
     record.outstandingAdvanceAfter = outstandingAdvanceAfter;
     record.extraReceived = extraReceived;
 
+    if (!record.recordDate && typeof record.month === "string") {
+      record.recordDate = `${record.month}-01`;
+    }
+
     outstanding = outstandingAdvanceAfter;
-    await record.save();
+
+    try {
+      await record.save();
+    } catch (error) {
+      // Skip legacy malformed rows so one bad document does not block salaries page.
+      if (error?.name !== "ValidationError") {
+        throw error;
+      }
+    }
   }
 }
 
 async function listSalaries(req, res, next) {
   try {
-    const employeeIds = await Salary.distinct("employeeId");
+    const employeeIds = await Salary.distinct("employeeId", {
+      employeeId: { $exists: true, $ne: null },
+      month: { $exists: true, $ne: null },
+      monthlySalary: { $exists: true, $ne: null },
+    });
+
     for (const employeeId of employeeIds) {
       await recalculateEmployeeLedger(employeeId);
     }

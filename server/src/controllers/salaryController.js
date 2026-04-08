@@ -38,17 +38,31 @@ function getDateKey(value) {
 }
 
 async function getOutstandingAdvanceBefore(employeeId, month) {
-  const records = await Salary.find({ employeeId, month: { $lt: month } }).sort(
-    { month: 1, createdAt: 1 },
-  );
+  const latestRecord = await Salary.findOne({
+    employeeId,
+    month: { $lt: month },
+  })
+    .sort({ month: -1, createdAt: -1 })
+    .lean();
 
-  return records.reduce(
+  const latestOutstanding = Number(latestRecord?.outstandingAdvanceAfter);
+  if (!Number.isNaN(latestOutstanding) && latestOutstanding > 0) {
+    return latestOutstanding;
+  }
+
+  const records = await Salary.find({ employeeId, month: { $lt: month } })
+    .select("extraReceived deductionApplied")
+    .lean();
+
+  const outstanding = records.reduce(
     (sum, entry) =>
       sum +
       Number(entry.extraReceived || 0) -
       Number(entry.deductionApplied || 0),
     0,
   );
+
+  return Math.max(0, outstanding);
 }
 
 async function listSalaries(req, res, next) {

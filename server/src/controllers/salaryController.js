@@ -142,11 +142,9 @@ async function createSalary(req, res, next) {
         console.log("Creating employee with:", { name, salary });
 
         if (Number.isNaN(salary) || salary <= 0) {
-          return res
-            .status(400)
-            .json({
-              message: "defaultMonthlySalary must be a valid positive number",
-            });
+          return res.status(400).json({
+            message: "defaultMonthlySalary must be a valid positive number",
+          });
         }
 
         const employee = await Employee.create({
@@ -164,12 +162,10 @@ async function createSalary(req, res, next) {
     const monthKey = getMonthKey(month || date);
 
     if (!employeeId || !monthKey || monthlySalary === undefined) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "employeeId, monthlySalary, and either month or date are required",
-        });
+      return res.status(400).json({
+        message:
+          "employeeId, monthlySalary, and either month or date are required",
+      });
     }
 
     if (Number.isNaN(Number(monthlySalary)) || Number(monthlySalary) < 0) {

@@ -172,7 +172,7 @@ export default function AdminSalariesPage() {
       monthlySalary: employee
         ? String(employee.monthlySalary || employee.defaultMonthlySalary || 0)
         : current.monthlySalary,
-        date: current.date || getCurrentDate(),
+      date: current.date || getCurrentDate(),
     }));
   }
 

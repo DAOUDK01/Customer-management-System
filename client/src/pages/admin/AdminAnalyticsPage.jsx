@@ -161,7 +161,8 @@ export default function AdminAnalyticsPage() {
     return {
       ...fallbackAnalytics,
       totalOrders: analyticsData.totalOrders ?? fallbackAnalytics.totalOrders,
-      totalRevenue: analyticsData.totalRevenue ?? fallbackAnalytics.totalRevenue,
+      totalRevenue:
+        analyticsData.totalRevenue ?? fallbackAnalytics.totalRevenue,
       averageOrderValue:
         analyticsData.averageOrderValue ?? fallbackAnalytics.averageOrderValue,
       byStatus: analyticsData.byStatus ?? fallbackAnalytics.byStatus,

@@ -293,7 +293,39 @@ export default function AdminSalariesPage() {
         setMessage(`Salary saved, but refresh failed: ${refreshError.message}`);
       }
     } catch (requestError) {
-      setMessage(requestError.message);
+      const message = String(requestError.message || "").toLowerCase();
+
+      if (
+        message.includes("salary already added") ||
+        (message.includes("e11000") && message.includes("month"))
+      ) {
+        try {
+          await apiRequest(
+            `/salaries/${encodeURIComponent(selectedEmployeeRecordId)}/${encodeURIComponent(getMonthKey(salaryForm.date) || currentMonth)}`,
+            {
+              method: "PATCH",
+              body: JSON.stringify({
+                date: salaryForm.date,
+                monthlySalary: resolvedMonthlySalary,
+                extraReceived: Number(salaryForm.extraReceived || 0),
+              }),
+            },
+          );
+
+          setMessage("Salary month updated with extra amount");
+          setSalaryForm((current) => ({
+            ...current,
+            date: getCurrentDate(),
+            monthlySalary: "",
+            extraReceived: "0",
+          }));
+          await loadSalaries();
+        } catch (fallbackError) {
+          setMessage(fallbackError.message);
+        }
+      } else {
+        setMessage(requestError.message);
+      }
     } finally {
       setLoading(false);
     }

@@ -356,6 +356,92 @@ async function createSalary(req, res, next) {
   }
 }
 
+async function updateSalaryForMonth(req, res, next) {
+  try {
+    const { employeeId, month } = req.params;
+    const { date, monthlySalary, extraReceived = 0 } = req.body;
+
+    const monthKey = getMonthKey(month);
+    const dateKey = getDateKey(date || `${monthKey}-01`);
+
+    if (!employeeId || !monthKey || !dateKey || monthlySalary === undefined) {
+      return res.status(400).json({
+        message: "employeeId, month, monthlySalary and valid date are required",
+      });
+    }
+
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    const parsedMonthlySalary = Number(monthlySalary);
+    const parsedExtraReceived = Number(extraReceived);
+
+    if (
+      Number.isNaN(parsedMonthlySalary) ||
+      parsedMonthlySalary < 0 ||
+      Number.isNaN(parsedExtraReceived) ||
+      parsedExtraReceived < 0
+    ) {
+      return res.status(400).json({
+        message:
+          "monthlySalary and extraReceived must be valid positive numbers",
+      });
+    }
+
+    const salary = await Salary.findOne({ employeeId, month: monthKey });
+    if (!salary) {
+      return res
+        .status(404)
+        .json({ message: "Salary record not found for this month" });
+    }
+
+    const outstandingBefore = await getOutstandingAdvanceBefore(
+      employee._id,
+      monthKey,
+    );
+
+    const updatedExtraReceived =
+      Number(salary.extraReceived || 0) + parsedExtraReceived;
+    const updatedExtraHistory = Array.isArray(salary.extraHistory)
+      ? [...salary.extraHistory]
+      : [];
+
+    if (parsedExtraReceived > 0) {
+      updatedExtraHistory.push({ date: dateKey, amount: parsedExtraReceived });
+    }
+
+    const deductionApplied = Math.min(
+      Math.max(outstandingBefore, 0),
+      parsedMonthlySalary,
+    );
+    const monthlyReceiving =
+      parsedMonthlySalary - deductionApplied + updatedExtraReceived;
+    const outstandingAdvanceAfter = Math.max(
+      0,
+      outstandingBefore - deductionApplied + updatedExtraReceived,
+    );
+
+    salary.employeeName = employee.name;
+    salary.recordDate = dateKey;
+    salary.monthlySalary = parsedMonthlySalary;
+    salary.extraReceived = updatedExtraReceived;
+    salary.extraHistory = updatedExtraHistory;
+    salary.deductionApplied = deductionApplied;
+    salary.monthlyReceiving = monthlyReceiving;
+    salary.outstandingAdvanceAfter = outstandingAdvanceAfter;
+    await salary.save();
+
+    return res.json({
+      salary,
+      message: "Salary for this month updated with extra amount",
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function deleteEmployee(req, res, next) {
   try {
     const { employeeId } = req.params;
@@ -382,5 +468,6 @@ module.exports = {
   listEmployees,
   createEmployee,
   createSalary,
+  updateSalaryForMonth,
   deleteEmployee,
 };

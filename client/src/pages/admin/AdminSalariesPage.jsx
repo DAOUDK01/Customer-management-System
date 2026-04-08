@@ -11,12 +11,16 @@ function getCurrentDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function isObjectId(value) {
+  return typeof value === "string" && /^[a-f\d]{24}$/i.test(value);
+}
+
 function getEmployeeRecordId(employee) {
-  if (employee?._id) {
+  if (employee?._id && isObjectId(String(employee._id))) {
     return String(employee._id);
   }
 
-  if (employee?.id) {
+  if (employee?.id && isObjectId(String(employee.id))) {
     return String(employee.id);
   }
 
@@ -215,6 +219,18 @@ export default function AdminSalariesPage() {
         (employee) =>
           getEmployeeKey(employee) === String(salaryForm.employeeId),
       );
+      const selectedEmployeeRecordId = getEmployeeRecordId(
+        selectedEmployeeForSalary,
+      );
+
+      if (!selectedEmployeeRecordId) {
+        setMessage(
+          "Select a backend-linked employee to add salary or extra amount.",
+        );
+        setLoading(false);
+        return;
+      }
+
       const resolvedMonthlySalary =
         String(salaryForm.monthlySalary).trim() === ""
           ? Number(
@@ -227,7 +243,7 @@ export default function AdminSalariesPage() {
       await apiRequest("/salaries", {
         method: "POST",
         body: JSON.stringify({
-          employeeId: getEmployeeRecordId(selectedEmployeeForSalary),
+          employeeId: selectedEmployeeRecordId,
           date: salaryForm.date,
           month: getMonthKey(salaryForm.date) || currentMonth,
           monthlySalary: resolvedMonthlySalary,
@@ -246,7 +262,7 @@ export default function AdminSalariesPage() {
         await loadSalaries();
       } catch (refreshError) {
         setMessage(
-          `Employee added, but refresh failed: ${refreshError.message}`,
+          `Salary saved, but refresh failed: ${refreshError.message}`,
         );
       }
     } catch (requestError) {
@@ -449,7 +465,8 @@ export default function AdminSalariesPage() {
         (salary) =>
           (selectedEmployeeRecordId &&
             String(salary.employeeId) === String(selectedEmployeeRecordId)) ||
-          salary.employeeName === selectedEmployee?.name,
+          String(salary.employeeName || "").trim().toLowerCase() ===
+            String(selectedEmployee?.name || "").trim().toLowerCase(),
       ),
     [salaries, selectedEmployeeRecordId, selectedEmployee],
   );
@@ -461,7 +478,7 @@ export default function AdminSalariesPage() {
 
     setSalaryForm((current) => ({
       ...current,
-      employeeId: selectedEmployee._id,
+      employeeId: getEmployeeKey(selectedEmployee),
       monthlySalary:
         current.monthlySalary ||
         String(
@@ -556,9 +573,9 @@ export default function AdminSalariesPage() {
               <button
                 type="button"
                 className="delete-btn-small"
-                onClick={() => handleDeleteEmployee(employee._id)}
+                onClick={() => handleDeleteEmployee(getEmployeeRecordId(employee))}
                 title="Delete employee"
-                disabled={loading}
+                disabled={loading || !getEmployeeRecordId(employee)}
               >
                 ✕
               </button>

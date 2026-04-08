@@ -1,10 +1,18 @@
 const API_BASE_URL = "/api";
+const DEFAULT_API_TIMEOUT_MS = 15000;
+
+function createTimeoutSignal(timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return { signal: controller.signal, clear: () => clearTimeout(timer) };
+}
 
 export async function apiRequest(path, options = {}) {
+  const { timeoutMs = DEFAULT_API_TIMEOUT_MS, ...requestOptions } = options;
   const token = localStorage.getItem("rms_token");
   const headers = {
     "Content-Type": "application/json",
-    ...(options.headers || {}),
+    ...(requestOptions.headers || {}),
   };
 
   if (token) {
@@ -12,15 +20,22 @@ export async function apiRequest(path, options = {}) {
   }
 
   let response;
+  const timeout = createTimeoutSignal(timeoutMs);
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
-      ...options,
+      ...requestOptions,
       headers,
+      signal: timeout.signal,
     });
   } catch (error) {
+    timeout.clear();
+    if (error?.name === "AbortError") {
+      throw new Error(`Request timed out for ${API_BASE_URL}${path}`);
+    }
     throw new Error(`Unable to reach the API at ${API_BASE_URL}${path}`);
   }
+  timeout.clear();
 
   const payload = await response.json().catch(() => ({}));
 
@@ -32,6 +47,7 @@ export async function apiRequest(path, options = {}) {
 }
 
 export async function apiDownload(path, filename) {
+  const timeout = createTimeoutSignal(30000);
   const token = localStorage.getItem("rms_token");
   const headers = {};
 
@@ -39,7 +55,21 @@ export async function apiDownload(path, filename) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, { headers });
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      headers,
+      signal: timeout.signal,
+    });
+  } catch (error) {
+    timeout.clear();
+    if (error?.name === "AbortError") {
+      throw new Error(`Download timed out for ${API_BASE_URL}${path}`);
+    }
+    throw new Error(`Unable to reach the API at ${API_BASE_URL}${path}`);
+  }
+  timeout.clear();
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));

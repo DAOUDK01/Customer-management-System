@@ -230,7 +230,13 @@ export default function AdminSalariesPage() {
         monthlySalary: "",
         extraReceived: "0",
       });
-      await loadSalaries();
+      try {
+        await loadSalaries();
+      } catch (refreshError) {
+        setMessage(
+          `Employee added, but refresh failed: ${refreshError.message}`,
+        );
+      }
     } catch (requestError) {
       setMessage(requestError.message);
     } finally {

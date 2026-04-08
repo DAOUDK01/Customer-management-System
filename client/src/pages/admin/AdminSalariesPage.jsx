@@ -277,7 +277,7 @@ export default function AdminSalariesPage() {
     const loadedSalaries =
       salaryResponse.status === "fulfilled"
         ? pickArray(salaryResponse.value, "salaries")
-        : [];
+        : null;
     const employeesFromSalaryEndpoint =
       salaryResponse.status === "fulfilled"
         ? pickArray(salaryResponse.value, "employees")
@@ -287,15 +287,29 @@ export default function AdminSalariesPage() {
         ? pickArray(employeesResponse.value, "employees")
         : [];
 
-    const salaryDerivedEmployees = buildEmployeesFromSalaries(loadedSalaries);
+    const salaryDerivedEmployees = buildEmployeesFromSalaries(
+      loadedSalaries ?? salaries,
+    );
     const loadedEmployees = mergeEmployees(
       employeesFromEmployeeEndpoint,
       employeesFromSalaryEndpoint,
       salaryDerivedEmployees,
     );
 
-    setSalaries(loadedSalaries);
-    setEmployees((current) => mergeEmployees(current, loadedEmployees));
+    if (loadedSalaries !== null) {
+      setSalaries(loadedSalaries);
+    }
+
+    if (loadedEmployees.length > 0) {
+      setEmployees((current) => mergeEmployees(current, loadedEmployees));
+    }
+
+    if (salaryResponse.status === "rejected") {
+      setMessage(
+        salaryResponse.reason?.message ||
+          "Salary refresh partially failed. Showing last known records.",
+      );
+    }
 
     if (!selectedEmployeeId && loadedEmployees.length > 0) {
       const firstEmployeeId = getEmployeeKey(loadedEmployees[0]);

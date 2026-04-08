@@ -187,7 +187,9 @@ function upsertSalaryRecord(records, nextRecord) {
     return records;
   }
 
-  const exists = records.some((record) => String(record._id) === String(nextRecord._id));
+  const exists = records.some(
+    (record) => String(record._id) === String(nextRecord._id),
+  );
   if (!exists) {
     return [nextRecord, ...records];
   }

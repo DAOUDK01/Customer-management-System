@@ -18,6 +18,11 @@ const salarySchema = new mongoose.Schema(
       required: true,
       match: /^\d{4}-(0[1-9]|1[0-2])$/,
     },
+    recordDate: {
+      type: String,
+      required: true,
+      match: /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/,
+    },
     monthlySalary: {
       type: Number,
       required: true,
@@ -45,6 +50,20 @@ const salarySchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    extraHistory: [
+      {
+        date: {
+          type: String,
+          required: true,
+          match: /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/,
+        },
+        amount: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+      },
+    ],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

@@ -137,10 +137,40 @@ async function deleteOrder(req, res, next) {
 
 async function deleteOldOrders(req, res, next) {
   try {
-    const { before } = req.query;
+    const { before, from, to } = req.query;
+
+    if (from || to) {
+      if (!from || !to) {
+        return res.status(400).json({ message: "Both from and to are required" });
+      }
+
+      const fromDate = new Date(`${from}T00:00:00.000Z`);
+      const toDate = new Date(`${to}T23:59:59.999Z`);
+
+      if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+        return res.status(400).json({ message: "Invalid from/to date" });
+      }
+
+      if (fromDate > toDate) {
+        return res
+          .status(400)
+          .json({ message: "from date must be before or equal to to date" });
+      }
+
+      const result = await Order.deleteMany({
+        createdAt: { $gte: fromDate, $lte: toDate },
+      });
+
+      return res.json({
+        message: "Orders deleted for selected date range",
+        deletedCount: result.deletedCount,
+      });
+    }
 
     if (!before) {
-      return res.status(400).json({ message: "before is required" });
+      return res
+        .status(400)
+        .json({ message: "Provide before or from and to query params" });
     }
 
     const beforeDate = new Date(before);

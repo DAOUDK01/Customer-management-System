@@ -6,12 +6,35 @@ function getMonthKey(value) {
     return value;
   }
 
+  if (
+    typeof value === "string" &&
+    /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(value)
+  ) {
+    return value.slice(0, 7);
+  }
+
   const date = new Date(value || Date.now());
   if (Number.isNaN(date.getTime())) {
     return null;
   }
 
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function getDateKey(value) {
+  if (
+    typeof value === "string" &&
+    /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(value)
+  ) {
+    return value;
+  }
+
+  const date = new Date(value || Date.now());
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }
 
 async function getOutstandingAdvanceBefore(employeeId, month) {
@@ -160,11 +183,12 @@ async function createSalary(req, res, next) {
 
     // Handle salary record creation
     const monthKey = getMonthKey(month || date);
+    const dateKey = getDateKey(date || `${monthKey}-01`);
 
-    if (!employeeId || !monthKey || monthlySalary === undefined) {
+    if (!employeeId || !monthKey || !dateKey || monthlySalary === undefined) {
       return res.status(400).json({
         message:
-          "employeeId, monthlySalary, and either month or date are required",
+          "employeeId, monthlySalary, and a valid date/month are required",
       });
     }
 
@@ -207,6 +231,17 @@ async function createSalary(req, res, next) {
       const updatedMonthlySalary = parsedMonthlySalary;
       const updatedExtraReceived =
         Number(existingSalary.extraReceived || 0) + parsedExtraReceived;
+      const updatedExtraHistory = Array.isArray(existingSalary.extraHistory)
+        ? [...existingSalary.extraHistory]
+        : [];
+
+      if (parsedExtraReceived > 0) {
+        updatedExtraHistory.push({
+          date: dateKey,
+          amount: parsedExtraReceived,
+        });
+      }
+
       const deductionApplied = Math.min(
         Math.max(outstandingBefore, 0),
         updatedMonthlySalary,
@@ -219,8 +254,10 @@ async function createSalary(req, res, next) {
       );
 
       existingSalary.employeeName = employee.name;
+      existingSalary.recordDate = dateKey;
       existingSalary.monthlySalary = updatedMonthlySalary;
       existingSalary.extraReceived = updatedExtraReceived;
+      existingSalary.extraHistory = updatedExtraHistory;
       existingSalary.deductionApplied = deductionApplied;
       existingSalary.monthlyReceiving = monthlyReceiving;
       existingSalary.outstandingAdvanceAfter = outstandingAdvanceAfter;
@@ -247,8 +284,13 @@ async function createSalary(req, res, next) {
       employeeId: employee._id,
       employeeName: employee.name,
       month: monthKey,
+      recordDate: dateKey,
       monthlySalary: parsedMonthlySalary,
       extraReceived: parsedExtraReceived,
+      extraHistory:
+        parsedExtraReceived > 0
+          ? [{ date: dateKey, amount: parsedExtraReceived }]
+          : [],
       deductionApplied,
       monthlyReceiving,
       outstandingAdvanceAfter,

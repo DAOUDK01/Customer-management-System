@@ -28,12 +28,41 @@ function getEmployeeRecordId(employee) {
 }
 
 function getMonthKey(value) {
+  if (
+    typeof value === "string" &&
+    /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(value)
+  ) {
+    return value.slice(0, 7);
+  }
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
 
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatExtraHistory(history) {
+  if (!Array.isArray(history) || history.length === 0) {
+    return "-";
+  }
+
+  const normalized = history
+    .map((entry) => ({
+      date: String(entry?.date || "").trim(),
+      amount: Number(entry?.amount || 0),
+    }))
+    .filter((entry) => entry.date && entry.amount > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (normalized.length === 0) {
+    return "-";
+  }
+
+  return normalized
+    .map((entry) => `${entry.date}: ${formatINR(entry.amount)}`)
+    .join(" | ");
 }
 
 function getEmployeeKey(employee) {
@@ -704,10 +733,12 @@ export default function AdminSalariesPage() {
             <table>
               <thead>
                 <tr>
+                  <th>Date</th>
                   <th>Month</th>
                   <th>Monthly Salary</th>
                   <th>Receiving</th>
                   <th>Extra</th>
+                  <th>Extra Details</th>
                   <th>Deduction</th>
                   <th>Advance Left</th>
                 </tr>
@@ -716,17 +747,19 @@ export default function AdminSalariesPage() {
                 {selectedEmployeeSalaries.length > 0 ? (
                   selectedEmployeeSalaries.map((salary) => (
                     <tr key={salary._id}>
+                      <td>{salary.recordDate || "-"}</td>
                       <td>{salary.month}</td>
                       <td>{formatINR(salary.monthlySalary)}</td>
                       <td>{formatINR(salary.monthlyReceiving)}</td>
                       <td>{formatINR(salary.extraReceived)}</td>
+                      <td>{formatExtraHistory(salary.extraHistory)}</td>
                       <td>{formatINR(salary.deductionApplied)}</td>
                       <td>{formatINR(salary.outstandingAdvanceAfter)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6">
+                    <td colSpan="8">
                       No salary records for this employee yet.
                     </td>
                   </tr>

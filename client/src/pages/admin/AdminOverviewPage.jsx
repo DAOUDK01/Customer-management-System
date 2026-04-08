@@ -11,7 +11,8 @@ export default function AdminOverviewPage() {
   const [rangeRevenue, setRangeRevenue] = useState(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [archiveBefore, setArchiveBefore] = useState("");
+  const [deleteFromDate, setDeleteFromDate] = useState("");
+  const [deleteToDate, setDeleteToDate] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +32,7 @@ export default function AdminOverviewPage() {
 
     try {
       const result = await apiRequest(
-        `/orders/archive?before=${encodeURIComponent(archiveBefore)}`,
+        `/orders/archive?from=${encodeURIComponent(deleteFromDate)}&to=${encodeURIComponent(deleteToDate)}`,
         { method: "DELETE" },
       );
       setMessage(`${result.message} (${result.deletedCount})`);
@@ -128,22 +129,39 @@ export default function AdminOverviewPage() {
       </section>
 
       <section className="content-card">
-        <h2>Archive old records</h2>
+        <h2>Delete records by date range</h2>
         <form className="form-stack" onSubmit={handleArchive}>
-          <label>
-            Delete records before
-            <input
-              type="date"
-              value={archiveBefore}
-              onChange={(event) => setArchiveBefore(event.target.value)}
-              required
-            />
-          </label>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "1rem",
+            }}
+          >
+            <label>
+              Start date
+              <input
+                type="date"
+                value={deleteFromDate}
+                onChange={(event) => setDeleteFromDate(event.target.value)}
+                required
+              />
+            </label>
+            <label>
+              End date
+              <input
+                type="date"
+                value={deleteToDate}
+                onChange={(event) => setDeleteToDate(event.target.value)}
+                required
+              />
+            </label>
+          </div>
 
           {message ? <p className="muted">{message}</p> : null}
 
           <button type="submit" disabled={loading}>
-            {loading ? "Cleaning..." : "Delete old records"}
+            {loading ? "Deleting..." : "Delete selected range"}
           </button>
         </form>
       </section>

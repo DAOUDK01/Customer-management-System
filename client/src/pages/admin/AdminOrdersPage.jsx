@@ -1,21 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiRequest } from "../../api";
 import { formatINR } from "../../utils/currency";
 
-const ADMIN_ORDER_STATUS = ["completed", "cancelled"];
+const ORDER_STATUS_OPTIONS = ["processing", "completed", "cancelled"];
+
+function getDayKey(value) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function getMonthKey(value) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [loading, setLoading] = useState(false);
+  const [summaryView, setSummaryView] = useState("day");
 
   async function loadOrders() {
     const result = await apiRequest("/orders");
-    const adminOrders = (result.orders || []).filter((order) =>
-      ADMIN_ORDER_STATUS.includes(order.status),
-    );
-    setOrders(adminOrders);
+    setOrders(result.orders || []);
   }
 
   useEffect(() => {
@@ -54,6 +62,12 @@ export default function AdminOrdersPage() {
 
   async function handleStatusUpdate(orderId, status) {
     setMessage("");
+
+    if (status === "processing") {
+      setMessage("Admin can set status to completed or cancelled only.");
+      return;
+    }
+
     try {
       await apiRequest(`/orders/${orderId}/status`, {
         method: "PATCH",
@@ -100,6 +114,33 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const groupedSummary = useMemo(() => {
+    const map = new Map();
+
+    orders.forEach((order) => {
+      const key = summaryView === "day" ? getDayKey(order.createdAt) : getMonthKey(order.createdAt);
+      const current = map.get(key) || {
+        period: key,
+        completed: 0,
+        incompleted: 0,
+        total: 0,
+      };
+
+      current.total += 1;
+      if (order.status === "completed") {
+        current.completed += 1;
+      } else {
+        current.incompleted += 1;
+      }
+
+      map.set(key, current);
+    });
+
+    return Array.from(map.values()).sort((a, b) =>
+      String(b.period).localeCompare(String(a.period)),
+    );
+  }, [orders, summaryView]);
+
   return (
     <section className="content-card">
       <div
@@ -124,6 +165,59 @@ export default function AdminOrdersPage() {
       </div>
 
       {message ? <p className="muted">{message}</p> : null}
+
+      <div
+        style={{
+          marginBottom: "1rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "1rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <h3 style={{ margin: 0 }}>Order Summary</h3>
+        <label>
+          View
+          <select
+            value={summaryView}
+            onChange={(event) => setSummaryView(event.target.value)}
+            style={{ marginLeft: "0.5rem" }}
+          >
+            <option value="day">Per day</option>
+            <option value="month">Per month</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="table-wrap" style={{ marginBottom: "1rem" }}>
+        <table>
+          <thead>
+            <tr>
+              <th>{summaryView === "day" ? "Day" : "Month"}</th>
+              <th>Completed</th>
+              <th>Incomplete</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {groupedSummary.length > 0 ? (
+              groupedSummary.map((entry) => (
+                <tr key={entry.period}>
+                  <td>{entry.period}</td>
+                  <td>{entry.completed}</td>
+                  <td>{entry.incompleted}</td>
+                  <td>{entry.total}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="4">No orders yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <div className="table-wrap">
         <table>
@@ -169,8 +263,12 @@ export default function AdminOrdersPage() {
                       handleStatusUpdate(order._id, event.target.value)
                     }
                   >
-                    {ADMIN_ORDER_STATUS.map((status) => (
-                      <option key={status} value={status}>
+                    {ORDER_STATUS_OPTIONS.map((status) => (
+                      <option
+                        key={status}
+                        value={status}
+                        disabled={status === "processing"}
+                      >
                         {status}
                       </option>
                     ))}

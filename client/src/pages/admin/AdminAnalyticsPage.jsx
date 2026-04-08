@@ -121,17 +121,58 @@ function getTopItemsForMonth(completedOrders, monthKey) {
 
 export default function AdminAnalyticsPage() {
   const [orders, setOrders] = useState([]);
+  const [analyticsData, setAnalyticsData] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(getMonthKey(new Date()));
   const [analyticsMessage, setAnalyticsMessage] = useState("");
   const [downloadMessage, setDownloadMessage] = useState("");
 
   useEffect(() => {
-    apiRequest("/orders?scope=all")
-      .then((result) => setOrders(result.orders || []))
-      .catch((error) => setAnalyticsMessage(error.message));
+    Promise.allSettled([
+      apiRequest("/orders?scope=all"),
+      apiRequest("/orders/analytics"),
+    ]).then(([ordersResult, analyticsResult]) => {
+      const errors = [];
+
+      if (ordersResult.status === "fulfilled") {
+        setOrders(ordersResult.value.orders || []);
+      } else {
+        errors.push(ordersResult.reason.message);
+      }
+
+      if (analyticsResult.status === "fulfilled") {
+        setAnalyticsData(analyticsResult.value);
+      } else {
+        errors.push(analyticsResult.reason.message);
+      }
+
+      if (errors.length > 0) {
+        setAnalyticsMessage(errors.join(" "));
+      }
+    });
   }, []);
 
-  const analytics = useMemo(() => buildAnalytics(orders), [orders]);
+  const analytics = useMemo(() => {
+    const fallbackAnalytics = buildAnalytics(orders);
+
+    if (!analyticsData) {
+      return fallbackAnalytics;
+    }
+
+    return {
+      ...fallbackAnalytics,
+      totalOrders: analyticsData.totalOrders ?? fallbackAnalytics.totalOrders,
+      totalRevenue: analyticsData.totalRevenue ?? fallbackAnalytics.totalRevenue,
+      averageOrderValue:
+        analyticsData.averageOrderValue ?? fallbackAnalytics.averageOrderValue,
+      byStatus: analyticsData.byStatus ?? fallbackAnalytics.byStatus,
+      last7: analyticsData.last7 ?? fallbackAnalytics.last7,
+      currentMonth:
+        analyticsData.currentMonth ?? fallbackAnalytics.currentMonth,
+      topItemsCurrentMonth:
+        analyticsData.topItemsCurrentMonth ??
+        fallbackAnalytics.topItemsCurrentMonth,
+    };
+  }, [analyticsData, orders]);
 
   const selectedMonthTopItems = useMemo(
     () => getTopItemsForMonth(analytics.completedOrders, selectedMonth),

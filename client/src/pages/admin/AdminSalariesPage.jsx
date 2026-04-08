@@ -104,8 +104,7 @@ export default function AdminSalariesPage() {
         return;
       }
 
-      // Use dedicated employee endpoint for better clarity
-      await apiRequest("/salaries/employees", {
+      await apiRequest("/salaries", {
         method: "POST",
         body: JSON.stringify({
           name: trimmedName,

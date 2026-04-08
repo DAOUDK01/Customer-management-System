@@ -31,18 +31,10 @@ export default function AdminDashboard() {
     setItems(result.items || []);
   }
 
-  async function loadSalaries() {
-    const result = await apiRequest("/salaries");
-    setSalaries(result.salaries || []);
-  }
-
   useEffect(() => {
-    Promise.all([
-      loadSummary(),
-      loadOrders(),
-      loadItems(),
-      loadSalaries(),
-    ]).catch((error) => setMessage(error.message));
+    Promise.all([loadSummary(), loadOrders(), loadItems()]).catch((error) =>
+      setMessage(error.message),
+    );
   }, []);
 
   async function handleArchive(event) {

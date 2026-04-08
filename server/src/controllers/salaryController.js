@@ -157,6 +157,9 @@ async function createSalary(req, res, next) {
       defaultMonthlySalary,
     } = req.body;
 
+    const hasMonthlySalaryInput =
+      monthlySalary !== undefined && String(monthlySalary).trim() !== "";
+
     console.log("createSalary received:", {
       employeeId,
       month,
@@ -199,17 +202,10 @@ async function createSalary(req, res, next) {
     const monthKey = getMonthKey(month || date);
     const dateKey = getDateKey(date || `${monthKey}-01`);
 
-    if (!employeeId || !monthKey || !dateKey || monthlySalary === undefined) {
+    if (!employeeId || !monthKey || !dateKey) {
       return res.status(400).json({
-        message:
-          "employeeId, monthlySalary, and a valid date/month are required",
+        message: "employeeId and a valid date/month are required",
       });
-    }
-
-    if (Number.isNaN(Number(monthlySalary)) || Number(monthlySalary) < 0) {
-      return res
-        .status(400)
-        .json({ message: "monthlySalary must be a valid positive number" });
     }
 
     const employee = await Employee.findById(employeeId);
@@ -217,7 +213,9 @@ async function createSalary(req, res, next) {
       return res.status(404).json({ message: "Employee not found" });
     }
 
-    const parsedMonthlySalary = Number(monthlySalary);
+    const parsedMonthlySalary = hasMonthlySalaryInput
+      ? Number(monthlySalary)
+      : Number(employee.defaultMonthlySalary || 0);
     const parsedExtraReceived = Number(extraReceived);
 
     if (
@@ -242,7 +240,9 @@ async function createSalary(req, res, next) {
     });
 
     const saveOrUpdateSalary = async (salaryDoc) => {
-      const updatedMonthlySalary = parsedMonthlySalary;
+      const updatedMonthlySalary = hasMonthlySalaryInput
+        ? parsedMonthlySalary
+        : Number(salaryDoc.monthlySalary || employee.defaultMonthlySalary || 0);
       const updatedExtraReceived =
         Number(salaryDoc.extraReceived || 0) + parsedExtraReceived;
       const updatedExtraHistory = Array.isArray(salaryDoc.extraHistory)
@@ -252,6 +252,7 @@ async function createSalary(req, res, next) {
       if (parsedExtraReceived > 0) {
         updatedExtraHistory.push({
           date: dateKey,
+          at: new Date(),
           amount: parsedExtraReceived,
         });
       }
@@ -312,7 +313,7 @@ async function createSalary(req, res, next) {
         extraReceived: parsedExtraReceived,
         extraHistory:
           parsedExtraReceived > 0
-            ? [{ date: dateKey, amount: parsedExtraReceived }]
+            ? [{ date: dateKey, at: new Date(), amount: parsedExtraReceived }]
             : [],
         deductionApplied,
         monthlyReceiving,
@@ -361,12 +362,15 @@ async function updateSalaryForMonth(req, res, next) {
     const { employeeId, month } = req.params;
     const { date, monthlySalary, extraReceived = 0 } = req.body;
 
+    const hasMonthlySalaryInput =
+      monthlySalary !== undefined && String(monthlySalary).trim() !== "";
+
     const monthKey = getMonthKey(month);
     const dateKey = getDateKey(date || `${monthKey}-01`);
 
-    if (!employeeId || !monthKey || !dateKey || monthlySalary === undefined) {
+    if (!employeeId || !monthKey || !dateKey) {
       return res.status(400).json({
-        message: "employeeId, month, monthlySalary and valid date are required",
+        message: "employeeId, month and valid date are required",
       });
     }
 
@@ -375,7 +379,9 @@ async function updateSalaryForMonth(req, res, next) {
       return res.status(404).json({ message: "Employee not found" });
     }
 
-    const parsedMonthlySalary = Number(monthlySalary);
+    const parsedMonthlySalary = hasMonthlySalaryInput
+      ? Number(monthlySalary)
+      : Number(employee.defaultMonthlySalary || 0);
     const parsedExtraReceived = Number(extraReceived);
 
     if (
@@ -409,15 +415,23 @@ async function updateSalaryForMonth(req, res, next) {
       : [];
 
     if (parsedExtraReceived > 0) {
-      updatedExtraHistory.push({ date: dateKey, amount: parsedExtraReceived });
+      updatedExtraHistory.push({
+        date: dateKey,
+        at: new Date(),
+        amount: parsedExtraReceived,
+      });
     }
+
+    const effectiveMonthlySalary = hasMonthlySalaryInput
+      ? parsedMonthlySalary
+      : Number(salary.monthlySalary || employee.defaultMonthlySalary || 0);
 
     const deductionApplied = Math.min(
       Math.max(outstandingBefore, 0),
-      parsedMonthlySalary,
+      effectiveMonthlySalary,
     );
     const monthlyReceiving =
-      parsedMonthlySalary - deductionApplied + updatedExtraReceived;
+      effectiveMonthlySalary - deductionApplied + updatedExtraReceived;
     const outstandingAdvanceAfter = Math.max(
       0,
       outstandingBefore - deductionApplied + updatedExtraReceived,
@@ -425,7 +439,7 @@ async function updateSalaryForMonth(req, res, next) {
 
     salary.employeeName = employee.name;
     salary.recordDate = dateKey;
-    salary.monthlySalary = parsedMonthlySalary;
+    salary.monthlySalary = effectiveMonthlySalary;
     salary.extraReceived = updatedExtraReceived;
     salary.extraHistory = updatedExtraHistory;
     salary.deductionApplied = deductionApplied;

@@ -51,18 +51,37 @@ function formatExtraHistory(history) {
   const normalized = history
     .map((entry) => ({
       date: String(entry?.date || "").trim(),
+      at: entry?.at ? new Date(entry.at) : null,
       amount: Number(entry?.amount || 0),
     }))
     .filter((entry) => entry.date && entry.amount > 0)
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => {
+      const atA = entryTime(entryOrNull(a.at));
+      const atB = entryTime(entryOrNull(b.at));
+      if (atA && atB) {
+        return atA - atB;
+      }
+      return a.date.localeCompare(b.date);
+    });
 
   if (normalized.length === 0) {
     return "-";
   }
 
   return normalized
-    .map((entry) => `${entry.date}: ${formatINR(entry.amount)}`)
+    .map((entry) => {
+      const hasTime = entry.at && !Number.isNaN(entry.at.getTime());
+      return `${entry.date}${hasTime ? ` ${entry.at.toLocaleTimeString()}` : ""}: ${formatINR(entry.amount)}`;
+    })
     .join(" | ");
+}
+
+function entryOrNull(value) {
+  return value instanceof Date ? value : null;
+}
+
+function entryTime(value) {
+  return value && !Number.isNaN(value.getTime()) ? value.getTime() : 0;
 }
 
 function getEmployeeKey(employee) {
@@ -163,6 +182,21 @@ function pickArray(payload, preferredKey) {
   return [];
 }
 
+function upsertSalaryRecord(records, nextRecord) {
+  if (!nextRecord?._id) {
+    return records;
+  }
+
+  const exists = records.some((record) => String(record._id) === String(nextRecord._id));
+  if (!exists) {
+    return [nextRecord, ...records];
+  }
+
+  return records.map((record) =>
+    String(record._id) === String(nextRecord._id) ? nextRecord : record,
+  );
+}
+
 export default function AdminSalariesPage() {
   const currentMonth = getCurrentMonth();
   const [salaries, setSalaries] = useState([]);
@@ -182,9 +216,10 @@ export default function AdminSalariesPage() {
   });
 
   async function loadSalaries() {
+    const cacheBust = Date.now();
     const [salaryResponse, employeesResponse] = await Promise.allSettled([
-      apiRequest("/salaries"),
-      apiRequest("/salaries/employees"),
+      apiRequest(`/salaries?_=${cacheBust}`),
+      apiRequest(`/salaries/employees?_=${cacheBust}`),
     ]);
 
     if (
@@ -269,7 +304,7 @@ export default function AdminSalariesPage() {
             )
           : Number(salaryForm.monthlySalary);
 
-      await apiRequest("/salaries", {
+      const result = await apiRequest("/salaries", {
         method: "POST",
         body: JSON.stringify({
           employeeId: selectedEmployeeRecordId,
@@ -279,6 +314,10 @@ export default function AdminSalariesPage() {
           extraReceived: Number(salaryForm.extraReceived || 0),
         }),
       });
+
+      if (result?.salary) {
+        setSalaries((current) => upsertSalaryRecord(current, result.salary));
+      }
 
       setMessage("Salary saved successfully");
       setSalaryForm({
@@ -300,7 +339,7 @@ export default function AdminSalariesPage() {
         (message.includes("e11000") && message.includes("month"))
       ) {
         try {
-          await apiRequest(
+          const fallbackResult = await apiRequest(
             `/salaries/${encodeURIComponent(selectedEmployeeRecordId)}/${encodeURIComponent(getMonthKey(salaryForm.date) || currentMonth)}`,
             {
               method: "PATCH",
@@ -311,6 +350,12 @@ export default function AdminSalariesPage() {
               }),
             },
           );
+
+          if (fallbackResult?.salary) {
+            setSalaries((current) =>
+              upsertSalaryRecord(current, fallbackResult.salary),
+            );
+          }
 
           setMessage("Salary month updated with extra amount");
           setSalaryForm((current) => ({
@@ -725,8 +770,12 @@ export default function AdminSalariesPage() {
                     monthlySalary: event.target.value,
                   })
                 }
-                placeholder="Leave empty to use employee default"
+                placeholder="Optional for extra-only entry"
               />
+              <small className="muted">
+                Enter monthly salary when paying salary. Leave empty to add
+                extra only.
+              </small>
             </label>
             <label>
               Extra received
@@ -749,7 +798,7 @@ export default function AdminSalariesPage() {
               </small>
             </label>
             <button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Add salary"}
+              {loading ? "Saving..." : "Save salary / add extra"}
             </button>
             {employees.length === 0 ? (
               <p className="muted">

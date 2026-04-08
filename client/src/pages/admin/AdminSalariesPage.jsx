@@ -516,6 +516,9 @@ export default function AdminSalariesPage() {
           if (
             endpoint === "/salaries/employees" &&
             (errorMessage.includes("route not found") ||
+              errorMessage.includes("forbidden") ||
+              errorMessage.includes("unauthorized") ||
+              errorMessage.includes("not allowed") ||
               errorMessage.includes("required") ||
               errorMessage.includes("amount and date"))
           ) {
@@ -592,6 +595,13 @@ export default function AdminSalariesPage() {
       ) {
         setMessage(
           "Your server is using old salary validation for this endpoint. Please redeploy backend with latest salary controller.",
+        );
+      } else if (
+        requestError.message?.toLowerCase().includes("forbidden") ||
+        requestError.message?.toLowerCase().includes("unauthorized")
+      ) {
+        setMessage(
+          "Manager employee creation is blocked by the running backend permissions. Restart/redeploy backend with latest salary routes.",
         );
       } else {
         setMessage(requestError.message);

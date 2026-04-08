@@ -280,14 +280,15 @@ export default function AdminSalariesPage() {
     setMessage("");
     setLoading(true);
 
+    let selectedEmployeeRecordId = "";
+    let resolvedMonthlySalary = 0;
+
     try {
       const selectedEmployeeForSalary = employees.find(
         (employee) =>
           getEmployeeKey(employee) === String(salaryForm.employeeId),
       );
-      const selectedEmployeeRecordId = getEmployeeRecordId(
-        selectedEmployeeForSalary,
-      );
+      selectedEmployeeRecordId = getEmployeeRecordId(selectedEmployeeForSalary);
 
       if (!selectedEmployeeRecordId) {
         setMessage(
@@ -297,7 +298,7 @@ export default function AdminSalariesPage() {
         return;
       }
 
-      const resolvedMonthlySalary =
+      resolvedMonthlySalary =
         String(salaryForm.monthlySalary).trim() === ""
           ? Number(
               selectedEmployeeForSalary?.monthlySalary ||
@@ -527,9 +528,26 @@ export default function AdminSalariesPage() {
         method: "DELETE",
       });
 
+      setEmployees((current) =>
+        current.filter((employee) => getEmployeeRecordId(employee) !== employeeId),
+      );
+      setSalaries((current) =>
+        current.filter((salary) => String(salary.employeeId) !== String(employeeId)),
+      );
+
+      setSelectedEmployeeId((current) => {
+        if (current !== employeeId) {
+          return current;
+        }
+
+        const remaining = employees.filter(
+          (employee) => getEmployeeRecordId(employee) !== employeeId,
+        );
+        return remaining.length > 0 ? getEmployeeKey(remaining[0]) : "";
+      });
+
       setMessage("Employee deleted");
-      setSelectedEmployeeId("");
-      await loadSalaries();
+      loadSalaries().catch(() => null);
     } catch (requestError) {
       setMessage(requestError.message);
     } finally {

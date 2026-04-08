@@ -11,6 +11,18 @@ function getCurrentDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getEmployeeRecordId(employee) {
+  if (employee?._id) {
+    return String(employee._id);
+  }
+
+  if (employee?.id) {
+    return String(employee.id);
+  }
+
+  return "";
+}
+
 function getMonthKey(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -215,7 +227,7 @@ export default function AdminSalariesPage() {
       await apiRequest("/salaries", {
         method: "POST",
         body: JSON.stringify({
-          employeeId: salaryForm.employeeId,
+          employeeId: getEmployeeRecordId(selectedEmployeeForSalary),
           date: salaryForm.date,
           month: getMonthKey(salaryForm.date) || currentMonth,
           monthlySalary: resolvedMonthlySalary,
@@ -223,7 +235,7 @@ export default function AdminSalariesPage() {
         }),
       });
 
-      setMessage("Monthly salary saved");
+      setMessage("Salary saved successfully");
       setSalaryForm({
         employeeId: salaryForm.employeeId,
         date: getCurrentDate(),
@@ -426,14 +438,20 @@ export default function AdminSalariesPage() {
     [employees, selectedEmployeeId],
   );
 
+  const selectedEmployeeRecordId = useMemo(
+    () => getEmployeeRecordId(selectedEmployee),
+    [selectedEmployee],
+  );
+
   const selectedEmployeeSalaries = useMemo(
     () =>
       salaries.filter(
         (salary) =>
-          String(salary.employeeId) === String(selectedEmployeeId) ||
+          (selectedEmployeeRecordId &&
+            String(salary.employeeId) === String(selectedEmployeeRecordId)) ||
           salary.employeeName === selectedEmployee?.name,
       ),
-    [salaries, selectedEmployeeId, selectedEmployee],
+    [salaries, selectedEmployeeRecordId, selectedEmployee],
   );
 
   useEffect(() => {
@@ -461,6 +479,13 @@ export default function AdminSalariesPage() {
         Select an employee box to view salary details, then add a new salary
         entry.
       </p>
+
+      {!selectedEmployeeRecordId && selectedEmployee ? (
+        <p className="muted">
+          This employee is from legacy data and cannot receive new salary
+          entries until a backend-linked employee record exists.
+        </p>
+      ) : null}
 
       <section className="salary-create-bar">
         <div>

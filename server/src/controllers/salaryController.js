@@ -198,6 +198,40 @@ async function createSalary(req, res, next) {
       employee._id,
       monthKey,
     );
+    const existingSalary = await Salary.findOne({
+      employeeId: employee._id,
+      month: monthKey,
+    });
+
+    if (existingSalary) {
+      const updatedMonthlySalary = parsedMonthlySalary;
+      const updatedExtraReceived =
+        Number(existingSalary.extraReceived || 0) + parsedExtraReceived;
+      const deductionApplied = Math.min(
+        Math.max(outstandingBefore, 0),
+        updatedMonthlySalary,
+      );
+      const monthlyReceiving =
+        updatedMonthlySalary - deductionApplied + updatedExtraReceived;
+      const outstandingAdvanceAfter = Math.max(
+        0,
+        outstandingBefore - deductionApplied + updatedExtraReceived,
+      );
+
+      existingSalary.employeeName = employee.name;
+      existingSalary.monthlySalary = updatedMonthlySalary;
+      existingSalary.extraReceived = updatedExtraReceived;
+      existingSalary.deductionApplied = deductionApplied;
+      existingSalary.monthlyReceiving = monthlyReceiving;
+      existingSalary.outstandingAdvanceAfter = outstandingAdvanceAfter;
+      await existingSalary.save();
+
+      return res.json({
+        salary: existingSalary,
+        message: "Salary for this month updated with extra amount",
+      });
+    }
+
     const deductionApplied = Math.min(
       Math.max(outstandingBefore, 0),
       parsedMonthlySalary,

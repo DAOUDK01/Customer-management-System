@@ -20,6 +20,67 @@ function getMonthKey(value) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function getEmployeeKey(employee) {
+  if (employee?._id) {
+    return String(employee._id);
+  }
+
+  if (employee?.id) {
+    return String(employee.id);
+  }
+
+  return `legacy-${String(employee?.name || "unknown").toLowerCase()}`;
+}
+
+function buildEmployeesFromSalaries(salaryRecords) {
+  const map = new Map();
+
+  (salaryRecords || []).forEach((record) => {
+    const name = String(record.employeeName || record.name || "").trim();
+    if (!name) {
+      return;
+    }
+
+    const key = String(record.employeeId || `legacy-${name.toLowerCase()}`);
+    if (!map.has(key)) {
+      map.set(key, {
+        _id: key,
+        name,
+        defaultMonthlySalary: Number(record.monthlySalary || record.amount || 0),
+        monthlySalary: Number(record.monthlySalary || record.amount || 0),
+        extraReceived: Number(record.extraReceived || 0),
+        outstandingAdvance: Number(record.outstandingAdvanceAfter || 0),
+      });
+      return;
+    }
+
+    const existing = map.get(key);
+    existing.monthlySalary = Number(record.monthlySalary || record.amount || existing.monthlySalary || 0);
+    existing.extraReceived = Number(record.extraReceived || existing.extraReceived || 0);
+    existing.outstandingAdvance = Number(record.outstandingAdvanceAfter || existing.outstandingAdvance || 0);
+  });
+
+  return Array.from(map.values()).sort((a, b) =>
+    String(a.name || "").localeCompare(String(b.name || "")),
+  );
+}
+
+function pickArray(payload, preferredKey) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.[preferredKey])) {
+    return payload[preferredKey];
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  return [];
+}
+
 export default function AdminSalariesPage() {
   const currentMonth = getCurrentMonth();
   const [salaries, setSalaries] = useState([]);
@@ -55,27 +116,29 @@ export default function AdminSalariesPage() {
 
     const loadedSalaries =
       salaryResponse.status === "fulfilled"
-        ? salaryResponse.value.salaries || []
+        ? pickArray(salaryResponse.value, "salaries")
         : [];
     const employeesFromSalaryEndpoint =
       salaryResponse.status === "fulfilled"
-        ? salaryResponse.value.employees || []
+        ? pickArray(salaryResponse.value, "employees")
         : [];
     const employeesFromEmployeeEndpoint =
       employeesResponse.status === "fulfilled"
-        ? employeesResponse.value.employees || []
+        ? pickArray(employeesResponse.value, "employees")
         : [];
 
     const loadedEmployees =
       employeesFromEmployeeEndpoint.length > 0
         ? employeesFromEmployeeEndpoint
-        : employeesFromSalaryEndpoint;
+        : employeesFromSalaryEndpoint.length > 0
+          ? employeesFromSalaryEndpoint
+          : buildEmployeesFromSalaries(loadedSalaries);
 
     setSalaries(loadedSalaries);
     setEmployees(loadedEmployees);
 
     if (!selectedEmployeeId && loadedEmployees.length > 0) {
-      const firstEmployeeId = String(loadedEmployees[0]._id);
+      const firstEmployeeId = getEmployeeKey(loadedEmployees[0]);
       setSelectedEmployeeId(firstEmployeeId);
       setSalaryForm((current) => ({
         ...current,
@@ -100,7 +163,7 @@ export default function AdminSalariesPage() {
 
     try {
       const selectedEmployeeForSalary = employees.find(
-        (employee) => String(employee._id) === String(salaryForm.employeeId),
+        (employee) => getEmployeeKey(employee) === String(salaryForm.employeeId),
       );
       const resolvedMonthlySalary =
         String(salaryForm.monthlySalary).trim() === ""
@@ -195,6 +258,32 @@ export default function AdminSalariesPage() {
       }
 
       if (createError) {
+        try {
+          const legacyResult = await apiRequest("/salaries", {
+            method: "POST",
+            body: JSON.stringify({
+              employeeName: trimmedName,
+              amount: salary,
+              date: getCurrentDate(),
+            }),
+          });
+
+          createError = null;
+          createdEmployee = {
+            _id: `legacy-${trimmedName.toLowerCase()}`,
+            name: trimmedName,
+            defaultMonthlySalary: salary,
+            monthlySalary: salary,
+            extraReceived: 0,
+            outstandingAdvance: 0,
+            ...(legacyResult.employee || {}),
+          };
+        } catch (legacyError) {
+          createError = legacyError;
+        }
+      }
+
+      if (createError) {
         throw createError;
       }
 
@@ -204,7 +293,8 @@ export default function AdminSalariesPage() {
       if (createdEmployee?._id) {
         setEmployees((current) => {
           const exists = current.some(
-            (employee) => String(employee._id) === String(createdEmployee._id),
+            (employee) =>
+              getEmployeeKey(employee) === getEmployeeKey(createdEmployee),
           );
 
           if (exists) {
@@ -217,10 +307,11 @@ export default function AdminSalariesPage() {
           );
           return next;
         });
-        setSelectedEmployeeId(String(createdEmployee._id));
+        const createdEmployeeKey = getEmployeeKey(createdEmployee);
+        setSelectedEmployeeId(createdEmployeeKey);
         setSalaryForm((current) => ({
           ...current,
-          employeeId: String(createdEmployee._id),
+          employeeId: createdEmployeeKey,
           monthlySalary: String(
             createdEmployee.defaultMonthlySalary ||
               createdEmployee.monthlySalary ||
@@ -275,7 +366,9 @@ export default function AdminSalariesPage() {
   }
 
   function handleEmployeeSelect(employeeId) {
-    const employee = employees.find((entry) => entry._id === employeeId);
+    const employee = employees.find(
+      (entry) => getEmployeeKey(entry) === String(employeeId),
+    );
     setSelectedEmployeeId(employeeId);
     setSalaryForm((current) => ({
       ...current,
@@ -288,7 +381,10 @@ export default function AdminSalariesPage() {
   }
 
   const selectedEmployee = useMemo(
-    () => employees.find((employee) => employee._id === selectedEmployeeId),
+    () =>
+      employees.find(
+        (employee) => getEmployeeKey(employee) === String(selectedEmployeeId),
+      ),
     [employees, selectedEmployeeId],
   );
 
@@ -373,17 +469,17 @@ export default function AdminSalariesPage() {
 
       <div className="employee-grid">
         {employees.map((employee) => {
-          const isSelected =
-            String(employee._id) === String(selectedEmployeeId);
+          const employeeKey = getEmployeeKey(employee);
+          const isSelected = employeeKey === String(selectedEmployeeId);
 
           return (
-            <div key={employee._id} className="employee-card-wrapper">
+            <div key={employeeKey} className="employee-card-wrapper">
               <button
                 type="button"
                 className={
                   isSelected ? "employee-card active" : "employee-card"
                 }
-                onClick={() => handleEmployeeSelect(employee._id)}
+                onClick={() => handleEmployeeSelect(employeeKey)}
               >
                 <strong>{employee.name}</strong>
                 <span>{formatINR(employee.monthlySalary)}</span>
@@ -447,7 +543,7 @@ export default function AdminSalariesPage() {
               >
                 <option value="">Select employee</option>
                 {employees.map((employee) => (
-                  <option key={employee._id} value={employee._id}>
+                  <option key={getEmployeeKey(employee)} value={getEmployeeKey(employee)}>
                     {employee.name}
                   </option>
                 ))}

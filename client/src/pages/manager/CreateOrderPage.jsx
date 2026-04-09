@@ -35,6 +35,27 @@ export default function CreateOrderPage() {
       return;
     }
 
+    const items = Array.isArray(receipt.items) ? receipt.items : [];
+    const lineTotals = items.map(
+      (item) => Number(item.price || 0) * Number(item.quantity || 0),
+    );
+
+    let assignedDiscount = 0;
+    const discountedLines = items.map((item, index) => {
+      const lineTotal = lineTotals[index];
+      const isLastLine = index === items.length - 1;
+      const lineDiscount = isLastLine
+        ? Math.max(0, receiptDiscount - assignedDiscount)
+        : Number(((lineTotal / Math.max(receiptSubtotal, 1)) * receiptDiscount).toFixed(2));
+
+      assignedDiscount += lineDiscount;
+
+      return {
+        ...item,
+        discountedLineTotal: Math.max(0, lineTotal - lineDiscount),
+      };
+    });
+
     const thermalHtml = `
       <!doctype html>
       <html>
@@ -70,13 +91,13 @@ export default function CreateOrderPage() {
               </tr>
             </thead>
             <tbody>
-              ${receipt.items
+              ${discountedLines
                 .map(
                   (item) => `
                     <tr>
                       <td>${item.name}</td>
                       <td class="right">${item.quantity}</td>
-                      <td class="right">${formatINR(Number(item.price) * Number(item.quantity))}</td>
+                      <td class="right">${formatINR(item.discountedLineTotal)}</td>
                     </tr>
                   `,
                 )

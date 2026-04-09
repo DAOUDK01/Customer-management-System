@@ -80,6 +80,34 @@ export default function QuickOrderPage() {
       return;
     }
 
+    const subtotalAmount = Number(
+      receiptData.subtotalAmount ||
+        Number(receiptData.totalAmount || 0) +
+          Number(receiptData.discountAmount || 0),
+    );
+    const discountAmount = Number(receiptData.discountAmount || 0);
+    const items = Array.isArray(receiptData.items) ? receiptData.items : [];
+    const lineTotals = items.map(
+      (item) => Number(item.price || 0) * Number(item.quantity || 0),
+    );
+
+    let assignedDiscount = 0;
+    const discountedLines = items.map((item, index) => {
+      const lineTotal = lineTotals[index];
+      const isLastLine = index === items.length - 1;
+      const lineDiscount = isLastLine
+        ? Math.max(0, discountAmount - assignedDiscount)
+        : Number(((lineTotal / Math.max(subtotalAmount, 1)) * discountAmount).toFixed(2));
+
+      assignedDiscount += lineDiscount;
+
+      return {
+        ...item,
+        lineTotal,
+        discountedLineTotal: Math.max(0, lineTotal - lineDiscount),
+      };
+    });
+
     const html = `
       <!doctype html>
       <html>
@@ -115,25 +143,17 @@ export default function QuickOrderPage() {
               </tr>
             </thead>
             <tbody>
-              ${receiptData.items
+              ${discountedLines
                 .map(
                   (item) =>
-                    `<tr><td>${item.name}</td><td class="right">${item.quantity}</td><td class="right">${formatINR(Number(item.price) * Number(item.quantity))}</td></tr>`,
+                    `<tr><td>${item.name}</td><td class="right">${item.quantity}</td><td class="right">${formatINR(item.discountedLineTotal)}</td></tr>`,
                 )
                 .join("")}
             </tbody>
           </table>
           <div class="line"></div>
-          <p>SUBTOTAL: ${formatINR(
-            Number(
-              receiptData.subtotalAmount ||
-                Number(receiptData.totalAmount || 0) +
-                  Number(receiptData.discountAmount || 0),
-            ),
-          )}</p>
-          <p>DISCOUNT: -${formatINR(
-            Number(receiptData.discountAmount || 0),
-          )}</p>
+          <p>SUBTOTAL: ${formatINR(subtotalAmount)}</p>
+          <p>DISCOUNT: -${formatINR(discountAmount)}</p>
           <p class="total">TOTAL: ${formatINR(receiptData.totalAmount)}</p>
           <p>Status: ${receiptData.status}</p>
           <p class="footer">Thank you</p>

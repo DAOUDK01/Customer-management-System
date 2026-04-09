@@ -24,11 +24,22 @@ export default function CreateOrderPage() {
   });
   const [receipt, setReceipt] = useState(null);
 
+  const receiptItems = Array.isArray(receipt?.items) ? receipt.items : [];
   const receiptTotal = Number(receipt?.totalAmount || 0);
-  const receiptDiscount = Number(receipt?.discountAmount || 0);
-  const receiptSubtotal = Number(
-    receipt?.subtotalAmount || receiptTotal + receiptDiscount,
+  const computedReceiptSubtotal = receiptItems.reduce(
+    (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+    0,
   );
+  const rawReceiptSubtotal = Number(receipt?.subtotalAmount);
+  const receiptSubtotal =
+    Number.isFinite(rawReceiptSubtotal) && rawReceiptSubtotal >= 0
+      ? rawReceiptSubtotal
+      : computedReceiptSubtotal;
+  const rawReceiptDiscount = Number(receipt?.discountAmount);
+  const receiptDiscount =
+    Number.isFinite(rawReceiptDiscount) && rawReceiptDiscount >= 0
+      ? rawReceiptDiscount
+      : Math.max(0, receiptSubtotal - receiptTotal);
 
   function handlePrintThermalReceipt() {
     if (!receipt) {

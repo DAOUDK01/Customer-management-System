@@ -80,13 +80,27 @@ export default function QuickOrderPage() {
       return;
     }
 
-    const subtotalAmount = Number(
-      receiptData.subtotalAmount ||
-        Number(receiptData.totalAmount || 0) +
-          Number(receiptData.discountAmount || 0),
-    );
-    const discountAmount = Number(receiptData.discountAmount || 0);
     const items = Array.isArray(receiptData.items) ? receiptData.items : [];
+    const computedSubtotalFromItems = items.reduce(
+      (sum, item) =>
+        sum + Number(item.price || 0) * Number(item.quantity || 0),
+      0,
+    );
+    const receiptTotalAmount = Number(receiptData.totalAmount || 0);
+
+    const rawSubtotalAmount = Number(receiptData.subtotalAmount);
+    const subtotalAmount =
+      Number.isFinite(rawSubtotalAmount) && rawSubtotalAmount >= 0
+        ? rawSubtotalAmount
+        : computedSubtotalFromItems;
+
+    const rawDiscountAmount = Number(receiptData.discountAmount);
+    const inferredDiscountAmount = Math.max(0, subtotalAmount - receiptTotalAmount);
+    const discountAmount =
+      Number.isFinite(rawDiscountAmount) && rawDiscountAmount >= 0
+        ? rawDiscountAmount
+        : inferredDiscountAmount;
+
     const lineTotals = items.map(
       (item) => Number(item.price || 0) * Number(item.quantity || 0),
     );
@@ -159,7 +173,7 @@ export default function QuickOrderPage() {
           <div class="line"></div>
           <p>SUBTOTAL: ${formatINR(subtotalAmount)}</p>
           <p>DISCOUNT: -${formatINR(discountAmount)}</p>
-          <p class="total">TOTAL: ${formatINR(receiptData.totalAmount)}</p>
+          <p class="total">TOTAL: ${formatINR(receiptTotalAmount)}</p>
           <p>Status: ${receiptData.status}</p>
           <p class="footer">Thank you</p>
         </body>

@@ -89,6 +89,8 @@ export default function ManageOrdersPage() {
               <tr>
                 <th>Time</th>
                 <th>Items</th>
+                <th>Subtotal</th>
+                <th>Discount</th>
                 <th>Total</th>
                 <th>Status</th>
               </tr>
@@ -102,6 +104,16 @@ export default function ManageOrdersPage() {
                       .map((item) => `${item.name} x${item.quantity}`)
                       .join(", ")}
                   </td>
+                  <td>
+                    {formatINR(
+                      Number(
+                        order.subtotalAmount ||
+                          Number(order.totalAmount || 0) +
+                            Number(order.discountAmount || 0),
+                      ),
+                    )}
+                  </td>
+                  <td>{formatINR(Number(order.discountAmount || 0))}</td>
                   <td>{formatINR(order.totalAmount)}</td>
                   <td>
                     <select

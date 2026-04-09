@@ -7,6 +7,10 @@ function calculateTotal(items) {
   return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 }
 
+function roundCurrency(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+}
+
 function getStartAndEndOfDay(referenceDate = new Date()) {
   const start = new Date(referenceDate);
   start.setHours(0, 0, 0, 0);
@@ -19,7 +23,7 @@ function getStartAndEndOfDay(referenceDate = new Date()) {
 
 async function createOrder(req, res, next) {
   try {
-    const { items, status } = req.body;
+    const { items, status, discountAmount: discountAmountInput } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: "Items are required" });
@@ -42,10 +46,23 @@ async function createOrder(req, res, next) {
         .json({ message: "Each item needs a name, price, and quantity" });
     }
 
-    const totalAmount = calculateTotal(normalizedItems);
+    const rawDiscountAmount = Number(discountAmountInput ?? 0);
+    if (Number.isNaN(rawDiscountAmount) || rawDiscountAmount < 0) {
+      return res
+        .status(400)
+        .json({ message: "Discount amount must be a valid non-negative number" });
+    }
+
+    const subtotalAmount = roundCurrency(calculateTotal(normalizedItems));
+    const discountAmount = roundCurrency(
+      Math.min(rawDiscountAmount, subtotalAmount),
+    );
+    const totalAmount = roundCurrency(subtotalAmount - discountAmount);
 
     const order = await Order.create({
       items: normalizedItems,
+      subtotalAmount,
+      discountAmount,
       totalAmount,
       status: status && ORDER_STATUSES.includes(status) ? status : "processing",
       createdBy: req.user.id,

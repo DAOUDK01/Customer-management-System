@@ -14,6 +14,7 @@ export default function QuickOrderPage() {
   const [receipt, setReceipt] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState("");
 
   const cartTotal = useMemo(
     () =>
@@ -23,6 +24,15 @@ export default function QuickOrderPage() {
       ),
     [cart],
   );
+
+  const parsedDiscountAmount = Number(discountAmount || 0);
+  const normalizedDiscountAmount = Math.min(
+    Number.isFinite(parsedDiscountAmount) && parsedDiscountAmount > 0
+      ? parsedDiscountAmount
+      : 0,
+    cartTotal,
+  );
+  const discountedCartTotal = cartTotal - normalizedDiscountAmount;
 
   async function loadItems() {
     const result = await apiRequest("/items");
@@ -114,6 +124,16 @@ export default function QuickOrderPage() {
             </tbody>
           </table>
           <div class="line"></div>
+          <p>SUBTOTAL: ${formatINR(
+            Number(
+              receiptData.subtotalAmount ||
+                Number(receiptData.totalAmount || 0) +
+                  Number(receiptData.discountAmount || 0),
+            ),
+          )}</p>
+          <p>DISCOUNT: -${formatINR(
+            Number(receiptData.discountAmount || 0),
+          )}</p>
           <p class="total">TOTAL: ${formatINR(receiptData.totalAmount)}</p>
           <p>Status: ${receiptData.status}</p>
           <p class="footer">Thank you</p>
@@ -150,12 +170,14 @@ export default function QuickOrderPage() {
             price: Number(entry.price),
             quantity: Number(entry.quantity),
           })),
+          discountAmount: normalizedDiscountAmount,
           status: "processing",
         }),
       });
 
       setReceipt(result.order);
       setCart([]);
+      setDiscountAmount("");
       setMessage("Order created and thermal receipt sent to print.");
       await loadItems();
       printThermalReceipt(result.order);
@@ -252,7 +274,25 @@ export default function QuickOrderPage() {
             </table>
           </div>
 
-          <p className="receipt-total">Order Total: {formatINR(cartTotal)}</p>
+          <label>
+            Discount amount
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={discountAmount}
+              onChange={(event) => setDiscountAmount(event.target.value)}
+              placeholder="0.00"
+            />
+          </label>
+
+          <p className="muted">Subtotal: {formatINR(cartTotal)}</p>
+          <p className="muted">
+            Discount: -{formatINR(normalizedDiscountAmount)}
+          </p>
+          <p className="receipt-total">
+            Order Total: {formatINR(discountedCartTotal)}
+          </p>
           {message ? <p className="muted">{message}</p> : null}
 
           <div className="receipt-actions">

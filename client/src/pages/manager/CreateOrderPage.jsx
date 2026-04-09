@@ -20,8 +20,15 @@ export default function CreateOrderPage() {
     name: "",
     price: "",
     quantity: "",
+    discountAmount: "",
   });
   const [receipt, setReceipt] = useState(null);
+
+  const receiptTotal = Number(receipt?.totalAmount || 0);
+  const receiptDiscount = Number(receipt?.discountAmount || 0);
+  const receiptSubtotal = Number(
+    receipt?.subtotalAmount || receiptTotal + receiptDiscount,
+  );
 
   function handlePrintThermalReceipt() {
     if (!receipt) {
@@ -77,7 +84,9 @@ export default function CreateOrderPage() {
             </tbody>
           </table>
           <div class="line"></div>
-          <p class="total">TOTAL: ${formatINR(receipt.totalAmount)}</p>
+          <p>SUBTOTAL: ${formatINR(receiptSubtotal)}</p>
+          <p>DISCOUNT: -${formatINR(receiptDiscount)}</p>
+          <p class="total">TOTAL: ${formatINR(receiptTotal)}</p>
           <p>Status: ${receipt.status}</p>
           <p class="footer">Thank you</p>
         </body>
@@ -112,13 +121,14 @@ export default function CreateOrderPage() {
               quantity: Number(orderForm.quantity),
             },
           ],
+          discountAmount: Number(orderForm.discountAmount || 0),
           status: "processing",
         }),
       });
 
       setReceipt(result.order);
       setMessage("Order created successfully. Receipt is ready.");
-      setOrderForm({ name: "", price: "", quantity: "" });
+      setOrderForm({ name: "", price: "", quantity: "", discountAmount: "" });
     } catch (requestError) {
       setMessage(requestError.message);
     } finally {
@@ -170,6 +180,20 @@ export default function CreateOrderPage() {
             }
             placeholder="1"
             required
+          />
+        </label>
+
+        <label>
+          Discount amount
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={orderForm.discountAmount}
+            onChange={(event) =>
+              setOrderForm({ ...orderForm, discountAmount: event.target.value })
+            }
+            placeholder="0.00"
           />
         </label>
 
@@ -226,9 +250,9 @@ export default function CreateOrderPage() {
             </table>
           </div>
 
-          <p className="receipt-total">
-            Total: {formatINR(receipt.totalAmount)}
-          </p>
+          <p className="muted">Subtotal: {formatINR(receiptSubtotal)}</p>
+          <p className="muted">Discount: -{formatINR(receiptDiscount)}</p>
+          <p className="receipt-total">Total: {formatINR(receiptTotal)}</p>
         </article>
       ) : null}
     </section>

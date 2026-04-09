@@ -46,7 +46,12 @@ export default function CreateOrderPage() {
       const isLastLine = index === items.length - 1;
       const lineDiscount = isLastLine
         ? Math.max(0, receiptDiscount - assignedDiscount)
-        : Number(((lineTotal / Math.max(receiptSubtotal, 1)) * receiptDiscount).toFixed(2));
+        : Number(
+            (
+              (lineTotal / Math.max(receiptSubtotal, 1)) *
+              receiptDiscount
+            ).toFixed(2),
+          );
 
       assignedDiscount += lineDiscount;
 

@@ -97,7 +97,12 @@ export default function QuickOrderPage() {
       const isLastLine = index === items.length - 1;
       const lineDiscount = isLastLine
         ? Math.max(0, discountAmount - assignedDiscount)
-        : Number(((lineTotal / Math.max(subtotalAmount, 1)) * discountAmount).toFixed(2));
+        : Number(
+            (
+              (lineTotal / Math.max(subtotalAmount, 1)) *
+              discountAmount
+            ).toFixed(2),
+          );
 
       assignedDiscount += lineDiscount;
 

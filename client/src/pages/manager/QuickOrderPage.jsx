@@ -82,8 +82,7 @@ export default function QuickOrderPage() {
 
     const items = Array.isArray(receiptData.items) ? receiptData.items : [];
     const computedSubtotalFromItems = items.reduce(
-      (sum, item) =>
-        sum + Number(item.price || 0) * Number(item.quantity || 0),
+      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
       0,
     );
     const receiptTotalAmount = Number(receiptData.totalAmount || 0);
@@ -95,7 +94,10 @@ export default function QuickOrderPage() {
         : computedSubtotalFromItems;
 
     const rawDiscountAmount = Number(receiptData.discountAmount);
-    const inferredDiscountAmount = Math.max(0, subtotalAmount - receiptTotalAmount);
+    const inferredDiscountAmount = Math.max(
+      0,
+      subtotalAmount - receiptTotalAmount,
+    );
     const discountAmount =
       Number.isFinite(rawDiscountAmount) && rawDiscountAmount >= 0
         ? rawDiscountAmount

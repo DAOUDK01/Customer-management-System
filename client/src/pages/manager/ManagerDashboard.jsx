@@ -7,7 +7,7 @@ export default function ManagerDashboard() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    apiRequest("/orders?status=completed&scope=all")
+    apiRequest("/orders?status=completed")
       .then((result) => setOrders(result.orders || []))
       .catch((error) => setMessage(error.message));
   }, []);
@@ -18,17 +18,8 @@ export default function ManagerDashboard() {
       0,
     );
 
-    const today = new Date();
-    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    const completedToday = orders.filter((order) => {
-      const date = new Date(order.createdAt);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-      return key === todayKey;
-    }).length;
-
     return {
       completedOrders: orders.length,
-      completedToday,
       totalRevenue,
     };
   }, [orders]);
@@ -37,23 +28,23 @@ export default function ManagerDashboard() {
     <>
       <section className="card-grid">
         <article className="stat-card">
-          <span>All Completed Orders</span>
+          <span>Today&apos;s Completed Orders</span>
           <strong>{summary.completedOrders}</strong>
         </article>
         <article className="stat-card">
-          <span>Completed Today</span>
-          <strong>{summary.completedToday}</strong>
+          <span>Today&apos;s Revenue</span>
+          <strong>{formatINR(summary.totalRevenue)}</strong>
         </article>
         <article className="stat-card">
-          <span>Revenue From Completed</span>
-          <strong>{formatINR(summary.totalRevenue)}</strong>
+          <span>Status</span>
+          <strong>Completed</strong>
         </article>
       </section>
 
       <section className="content-card">
-        <h2>Completed Orders History</h2>
+        <h2>Today&apos;s Completed Orders</h2>
         <p className="muted">
-          This view shows every completed order, not only today.
+          This view shows only completed orders created today.
         </p>
         {message ? <p className="muted">{message}</p> : null}
 

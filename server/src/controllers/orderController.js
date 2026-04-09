@@ -50,7 +50,9 @@ async function createOrder(req, res, next) {
     if (Number.isNaN(rawDiscountAmount) || rawDiscountAmount < 0) {
       return res
         .status(400)
-        .json({ message: "Discount amount must be a valid non-negative number" });
+        .json({
+          message: "Discount amount must be a valid non-negative number",
+        });
     }
 
     const subtotalAmount = roundCurrency(calculateTotal(normalizedItems));
